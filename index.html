@@ -1,0 +1,1296 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0" />
+<title>雙胞胎奶茶手記｜懷孕與產後花費・里程碑紀錄</title>
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="theme-color" content="#F7F0E6" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍼</text></svg>" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@500;600;700&family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+  :root{
+    --cream:      #F7F0E6;
+    --cream-deep: #ECE0CD;
+    --card:       #FFFDF8;
+    --ink:        #40301F;
+    --ink-soft:   #948269;
+    --line:       #E6D8C3;
+    --clay:       #AD7A4E;
+    --clay-deep:  #8C5E37;
+    --gold:       #C9A66B;
+    --sage:       #8FA377;
+    --dusk:       #7392B5;
+    --rose:       #C6919B;
+  }
+  html,body{
+    background: var(--cream);
+    color: var(--ink);
+    font-family: 'Noto Sans TC', -apple-system, BlinkMacSystemFont, sans-serif;
+    -webkit-tap-highlight-color: transparent;
+  }
+  body{
+    background-image: radial-gradient(circle at 1px 1px, rgba(173,122,78,0.06) 1px, transparent 0);
+    background-size: 22px 22px;
+  }
+  .font-display{ font-family:'Noto Serif TC','Noto Sans TC',serif; letter-spacing:.02em; }
+
+  .card{ background: var(--card); border: 1px solid var(--line); border-radius: 1.25rem; box-shadow: 0 6px 20px -12px rgba(120,90,60,0.16); }
+
+  .eyebrow{ display:flex; align-items:center; gap:.4rem; font-size:.78rem; font-weight:700; color:var(--clay-deep); letter-spacing:.03em; margin-bottom:.85rem; }
+  .eyebrow .twin-dot{ display:inline-flex; width:16px; height:11px; flex-shrink:0; }
+  .eyebrow .count-badge{ margin-left:auto; font-weight:600; color:var(--ink-soft); font-size:.72rem; letter-spacing:0; }
+
+  .badge-target{ display:inline-flex; align-items:center; gap:.3rem; padding:.2rem .7rem; border-radius:9999px; font-size:.72rem; font-weight:700; color:#fff; white-space:nowrap; }
+  .badge-type{ display:inline-flex; align-items:center; gap:.3rem; padding:.2rem .7rem; border-radius:9999px; font-size:.7rem; font-weight:700; background:var(--cream-deep); color:var(--clay-deep); white-space:nowrap; }
+  .tag-category{ display:inline-flex; align-items:center; gap:.35rem; font-size:.72rem; font-weight:600; color:var(--ink-soft); }
+  .tag-category .dot{ width:7px; height:7px; border-radius:9999px; flex-shrink:0; }
+
+  .press-fx{ transition: transform .12s ease, box-shadow .12s ease, filter .12s ease; }
+  .press-fx:active{ transform: translateY(1px) scale(0.98); filter:brightness(0.97); }
+
+  #tabNav{ position:relative; background:var(--cream-deep); border-radius:9999px; padding:4px; overflow-x:auto; }
+  #tabIndicator{ position:absolute; top:4px; bottom:4px; left:4px; border-radius:9999px; background:var(--card); box-shadow: 0 2px 8px rgba(120,90,60,0.18); transition: transform .28s cubic-bezier(.4,0,.2,1), width .28s cubic-bezier(.4,0,.2,1); width:0; }
+
+  .nav-btn{ display:flex; align-items:center; gap:.5rem; font-weight:700; font-size:.82rem; color:var(--ink-soft); transition: color .2s ease, background .2s ease; white-space:nowrap; }
+  #tabNav .nav-btn{ position:relative; z-index:1; flex:1; justify-content:center; padding:.6rem .3rem; }
+  #tabNav .nav-btn.active{ color: var(--clay-deep); background:transparent; }
+  #sidebarNav .nav-btn{ width:100%; text-align:left; padding:.65rem .9rem; border-radius:.85rem; }
+  #sidebarNav .nav-btn.active{ background:var(--cream-deep); color:var(--clay-deep); }
+  #sidebarNav .nav-btn:hover:not(.active){ background:rgba(173,122,78,0.06); }
+
+  .field-label{ font-size:.78rem; color:var(--ink-soft); font-weight:700; margin-bottom:.32rem; display:block; letter-spacing:.02em; }
+  .input-field{ width:100%; background:#fff; border:1.5px solid var(--line); border-radius:.9rem; padding:.66rem .9rem; font-size:.95rem; color:var(--ink); outline:none; transition: border-color .15s ease, box-shadow .15s ease; }
+  .input-field:focus{ border-color: var(--clay); box-shadow: 0 0 0 4px rgba(173,122,78,0.14); }
+  button:focus-visible, .press-fx:focus-visible, a:focus-visible{ outline: 3px solid var(--gold); outline-offset: 2px; }
+
+  .entry-card{ position:relative; background:#fff; border:1px solid var(--line); border-radius:1rem; padding:.9rem 1rem .9rem 1.15rem; overflow:hidden; }
+  .entry-card::before{ content:''; position:absolute; left:0; top:0; bottom:0; width:5px; }
+
+  .timeline-line{ border-left:2px dashed var(--line); }
+  .timeline-dot{ position:absolute; left:-31px; top:2px; width:16px; height:16px; border-radius:9999px; box-shadow:0 0 0 5px var(--cream); }
+
+  .empty-state{ text-align:center; color:var(--ink-soft); font-size:.88rem; padding:2.4rem 1rem; }
+  .empty-state .twin-emblem{ margin:0 auto .7rem; opacity:.55; }
+
+  .quick-btn{ background:#fff; border:1.5px solid var(--line); border-radius:1.1rem; padding:.95rem .6rem; display:flex; flex-direction:column; align-items:center; gap:.55rem; box-shadow: 0 3px 10px -6px rgba(120,90,60,0.15); }
+  .quick-icon{ width:44px; height:44px; border-radius:9999px; display:flex; align-items:center; justify-content:center; font-size:1.3rem; }
+
+  @keyframes fadeInUp{ from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);} }
+  .fade-in{ animation: fadeInUp .3s ease both; }
+
+  #modalOverlay{ transition: opacity .2s ease; backdrop-filter: blur(2px); }
+  #modalBox{ animation: modalPop .2s cubic-bezier(.34,1.56,.64,1); }
+  @keyframes modalPop{ from{ transform:translateY(14px) scale(.96); opacity:0; } to{ transform:translateY(0) scale(1); opacity:1; } }
+
+  @media (prefers-reduced-motion: reduce){ *{ animation-duration:0.001ms !important; transition-duration:0.001ms !important; } }
+  ::-webkit-scrollbar{ width:6px; height:6px; }
+  ::-webkit-scrollbar-thumb{ background: var(--gold); border-radius:3px; opacity:.5; }
+
+  .thumb{ width:100%; max-height:11rem; object-fit:cover; border-radius:.75rem; cursor:pointer; }
+  .spinner{ width:14px; height:14px; border-radius:9999px; border:2px solid var(--line); border-top-color:var(--clay); display:inline-block; animation:spin .7s linear infinite; }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+
+  /* ---------- 必買清單：打勾樣式 ---------- */
+  .check-label{ display:flex; align-items:center; gap:.35rem; font-size:.75rem; font-weight:700; cursor:pointer; white-space:nowrap; color:var(--ink-soft); }
+  .check-label input{ width:16px; height:16px; accent-color:var(--clay); cursor:pointer; }
+  .checklist-group-title{ font-size:.82rem; font-weight:700; color:var(--clay-deep); margin:1.1rem 0 .6rem; display:flex; align-items:center; gap:.4rem; }
+  .checklist-group-title:first-child{ margin-top:0; }
+  .progress-track{ background:var(--cream-deep); border-radius:9999px; height:10px; overflow:hidden; }
+  .progress-fill{ background:linear-gradient(90deg, var(--dusk), var(--rose)); height:100%; border-radius:9999px; transition:width .4s ease; }
+
+  /* ---------- 媽媽禮：狀態選單與期限標示 ---------- */
+  .status-select{ font-size:.76rem; font-weight:700; border-radius:.7rem; padding:.35rem .6rem; border:1.5px solid var(--line); background:#fff; color:var(--ink); }
+  .deadline-ok{ color:var(--ink-soft); }
+  .deadline-soon{ color:#B8860B; font-weight:700; }
+  .deadline-over{ color:#B5453D; font-weight:700; }
+</style>
+</head>
+
+<body class="min-h-screen">
+
+<!-- ============ 登入畫面 ============ -->
+<div id="authScreen" class="min-h-screen flex items-center justify-center px-4">
+  <div class="card p-7 w-full max-w-sm">
+    <div class="flex justify-center mb-3">
+      <svg viewBox="0 0 64 40" class="w-14 h-9">
+        <circle cx="24" cy="20" r="15" fill="var(--dusk)" style="mix-blend-mode:multiply" opacity="0.88"/>
+        <circle cx="40" cy="20" r="15" fill="var(--rose)" style="mix-blend-mode:multiply" opacity="0.88"/>
+      </svg>
+    </div>
+    <h1 class="font-display text-xl font-bold text-center mb-1" style="color:var(--clay-deep)">雙胞胎奶茶手記</h1>
+    <p class="text-xs text-center mb-6" style="color:var(--ink-soft)">請用家庭共用帳號登入，資料將自動雲端同步</p>
+    <form id="loginForm" class="space-y-3">
+      <div>
+        <label class="field-label">Email</label>
+        <input id="loginEmail" type="email" required class="input-field" autocomplete="username" />
+      </div>
+      <div>
+        <label class="field-label">密碼</label>
+        <input id="loginPassword" type="password" required class="input-field" autocomplete="current-password" />
+      </div>
+      <p id="loginError" class="text-xs min-h-[1rem]" style="color:#B5453D"></p>
+      <button id="loginSubmitBtn" type="submit" class="press-fx w-full py-3 rounded-2xl text-white font-bold" style="background:var(--clay)">登入</button>
+    </form>
+  </div>
+</div>
+
+<!-- ============ 主應用 ============ -->
+<div id="appRoot" class="hidden max-w-2xl md:max-w-5xl lg:max-w-6xl mx-auto px-4 md:px-6 pt-6 md:pt-10 pb-16 md:grid md:grid-cols-[268px_1fr] md:gap-8 md:items-start">
+
+  <aside class="space-y-6 md:sticky md:top-8">
+    <header class="text-center md:text-left">
+      <div class="flex justify-center md:justify-start mb-2">
+        <svg viewBox="0 0 64 40" class="w-12 h-8">
+          <circle cx="24" cy="20" r="15" fill="var(--dusk)" style="mix-blend-mode:multiply" opacity="0.88"/>
+          <circle cx="40" cy="20" r="15" fill="var(--rose)" style="mix-blend-mode:multiply" opacity="0.88"/>
+        </svg>
+      </div>
+      <h1 class="font-display text-[1.55rem] font-bold leading-tight" style="color:var(--clay-deep)">雙胞胎奶茶手記</h1>
+      <p class="text-[10px] mt-1 tracking-[0.18em] font-semibold uppercase" style="color:var(--ink-soft)">Twin Pregnancy &amp; Postpartum Tracker</p>
+      <p id="userEmailLabel" class="text-[11px] mt-2" style="color:var(--ink-soft)"></p>
+    </header>
+
+    <nav id="sidebarNav" class="hidden md:flex md:flex-col gap-1 card p-2">
+      <button class="nav-btn active" data-tab="overview" onclick="showTab('overview')"><span>📊</span>總覽</button>
+      <button class="nav-btn" data-tab="expense" onclick="showTab('expense')"><span>💰</span>花費紀錄</button>
+      <button class="nav-btn" data-tab="timeline" onclick="showTab('timeline')"><span>🗓️</span>時間軸與里程碑</button>
+      <button class="nav-btn" data-tab="checklist" onclick="showTab('checklist')"><span>✅</span>必買清單</button>
+      <button class="nav-btn" data-tab="benefits" onclick="showTab('benefits')"><span>🎁</span>媽媽禮與補助</button>
+    </nav>
+
+    <section class="card p-5">
+      <div class="eyebrow">
+        <svg viewBox="0 0 64 40" class="twin-dot"><circle cx="24" cy="20" r="15" fill="var(--dusk)"/><circle cx="40" cy="20" r="15" fill="var(--rose)"/></svg>
+        快速紀錄
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <button onclick="openFeedModal('babyA')" class="quick-btn press-fx" style="border-color:rgba(115,146,181,.4)">
+          <span class="quick-icon" style="background:rgba(115,146,181,.14)">🍼</span>
+          <span class="text-sm font-bold" style="color:var(--dusk)">大寶喝奶</span>
+        </button>
+        <button onclick="openFeedModal('babyB')" class="quick-btn press-fx" style="border-color:rgba(198,145,155,.45)">
+          <span class="quick-icon" style="background:rgba(198,145,155,.16)">🍼</span>
+          <span class="text-sm font-bold" style="color:var(--rose)">二寶喝奶</span>
+        </button>
+        <button onclick="openDiaperModal('babyA')" class="quick-btn press-fx" style="border-color:rgba(115,146,181,.4)">
+          <span class="quick-icon" style="background:rgba(115,146,181,.14)">🧷</span>
+          <span class="text-sm font-bold" style="color:var(--dusk)">大寶換尿布</span>
+        </button>
+        <button onclick="openDiaperModal('babyB')" class="quick-btn press-fx" style="border-color:rgba(198,145,155,.45)">
+          <span class="quick-icon" style="background:rgba(198,145,155,.16)">🧷</span>
+          <span class="text-sm font-bold" style="color:var(--rose)">二寶換尿布</span>
+        </button>
+      </div>
+    </section>
+
+    <section class="hidden md:block card p-4">
+      <div class="eyebrow">雲端備份 / 帳號</div>
+      <div class="flex flex-col gap-2">
+        <button onclick="exportData()" class="press-fx py-2.5 rounded-xl font-bold text-sm" style="background:var(--cream-deep);color:var(--ink)">⬇️ 匯出目前資料 (JSON)</button>
+        <label class="press-fx py-2.5 rounded-xl font-bold text-sm text-center cursor-pointer" style="background:var(--cream-deep);color:var(--ink)">
+          ⬆️ 匯入備份 (JSON)
+          <input type="file" accept="application/json" class="hidden" onchange="handleImportFile(event)" />
+        </label>
+        <button onclick="logout()" class="press-fx py-2.5 rounded-xl font-bold text-sm" style="background:#F5E1DE;color:#B5453D">登出</button>
+      </div>
+      <p class="text-[11px] mt-3 leading-relaxed" style="color:var(--ink-soft)">資料已即時同步至雲端資料庫，登入同一組帳號即可在任何裝置查看。</p>
+    </section>
+  </aside>
+
+  <div class="min-w-0 mt-6 md:mt-0">
+    <nav id="tabNav" class="md:hidden flex mb-6 sticky top-2 z-30">
+      <div id="tabIndicator"></div>
+      <button class="nav-btn active" data-tab="overview" onclick="showTab('overview')">📊 總覽</button>
+      <button class="nav-btn" data-tab="expense" onclick="showTab('expense')">💰 花費</button>
+      <button class="nav-btn" data-tab="timeline" onclick="showTab('timeline')">🗓️ 時間軸</button>
+      <button class="nav-btn" data-tab="checklist" onclick="showTab('checklist')">✅ 清單</button>
+      <button class="nav-btn" data-tab="benefits" onclick="showTab('benefits')">🎁 福利</button>
+    </nav>
+
+    <main>
+      <!-- ===================== 總覽 ===================== -->
+      <section id="tab-overview" class="space-y-6">
+        <div class="card p-6 md:p-8 text-center md:text-left">
+          <div class="md:flex md:items-end md:justify-between md:gap-6">
+            <div>
+              <p class="text-xs tracking-wide" style="color:var(--ink-soft)">累積總花費</p>
+              <p id="totalAmount" class="font-display text-[2.6rem] md:text-[3rem] font-bold mt-1 leading-none" style="color:var(--clay-deep)">$0</p>
+            </div>
+            <div class="grid grid-cols-3 md:flex md:gap-3 gap-2.5 mt-5 md:mt-0 text-xs">
+              <div class="rounded-2xl py-2.5 px-3 md:min-w-[110px]" style="background:var(--cream-deep)">
+                <div class="font-bold text-sm" style="color:var(--sage)" id="sumPregnancy">$0</div>
+                <div class="mt-0.5" style="color:var(--ink-soft)">孕期/共通</div>
+              </div>
+              <div class="rounded-2xl py-2.5 px-3 md:min-w-[110px]" style="background:var(--cream-deep)">
+                <div class="font-bold text-sm" style="color:var(--dusk)" id="sumBabyA">$0</div>
+                <div class="mt-0.5" style="color:var(--ink-soft)">大寶</div>
+              </div>
+              <div class="rounded-2xl py-2.5 px-3 md:min-w-[110px]" style="background:var(--cream-deep)">
+                <div class="font-bold text-sm" style="color:var(--rose)" id="sumBabyB">$0</div>
+                <div class="mt-0.5" style="color:var(--ink-soft)">二寶</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid gap-6 md:grid-cols-2">
+          <div class="card p-5">
+            <div class="eyebrow">
+              <svg viewBox="0 0 64 40" class="twin-dot"><circle cx="24" cy="20" r="15" fill="var(--clay)"/><circle cx="40" cy="20" r="15" fill="var(--gold)"/></svg>
+              依「花費分類」統計
+            </div>
+            <div class="h-64"><canvas id="categoryChart"></canvas></div>
+          </div>
+          <div class="card p-5">
+            <div class="eyebrow">
+              <svg viewBox="0 0 64 40" class="twin-dot"><circle cx="24" cy="20" r="15" fill="var(--dusk)"/><circle cx="40" cy="20" r="15" fill="var(--rose)"/></svg>
+              依「適用對象」統計
+            </div>
+            <div class="h-64"><canvas id="targetChart"></canvas></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== 花費管理 ===================== -->
+      <section id="tab-expense" class="hidden">
+        <div class="grid gap-6 md:grid-cols-[360px_1fr] md:items-start">
+          <div class="card p-5">
+            <div class="eyebrow"><span>✏️</span>新增一筆花費</div>
+            <form id="expenseForm" class="space-y-3" onsubmit="handleAddExpense(event)">
+              <div>
+                <label class="field-label">金額（NT$）</label>
+                <input id="expAmount" type="number" min="0" step="1" inputmode="numeric" required placeholder="例如：1200" class="input-field" />
+              </div>
+              <div>
+                <label class="field-label">日期</label>
+                <input id="expDate" type="date" required class="input-field" />
+              </div>
+              <div>
+                <label class="field-label">品項／備註</label>
+                <input id="expNote" type="text" required placeholder="例如：自費羊膜穿刺" class="input-field" />
+              </div>
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="field-label">適用對象</label>
+                  <select id="expTarget" required class="input-field">
+                    <option value="" disabled selected>請選擇</option>
+                    <option value="pregnancy">孕期/共通</option>
+                    <option value="babyA">大寶 (Baby A)</option>
+                    <option value="babyB">二寶 (Baby B)</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="field-label">花費分類</label>
+                  <select id="expCategory" required class="input-field">
+                    <option value="" disabled selected>請選擇</option>
+                    <option value="medical">醫療產檢（含自費項目）</option>
+                    <option value="postpartum">月子中心/產後照護</option>
+                    <option value="nutrition">孕期營養品</option>
+                    <option value="babygoods">寶寶用品（大型/共通）</option>
+                    <option value="consumables">尿布奶粉（消耗品）</option>
+                    <option value="misc">雜項</option>
+                  </select>
+                </div>
+              </div>
+              <button id="expSubmitBtn" type="submit" class="press-fx w-full py-3.5 rounded-2xl text-white font-bold" style="background:var(--clay)">＋ 新增花費</button>
+            </form>
+          </div>
+
+          <div class="card p-5">
+            <div class="eyebrow"><span>📋</span>花費歷史（最新在上）<span id="expenseCount" class="count-badge"></span></div>
+            <div id="expenseList" class="space-y-2.5"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== 時間軸與里程碑 ===================== -->
+      <section id="tab-timeline" class="hidden">
+        <div class="grid gap-6 md:grid-cols-[360px_1fr] md:items-start">
+          <div class="card p-5">
+            <div class="eyebrow"><span>✏️</span>新增里程碑</div>
+            <form id="milestoneForm" class="space-y-3" onsubmit="handleAddMilestone(event)">
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="field-label">日期</label>
+                  <input id="msDate" type="date" required class="input-field" />
+                </div>
+                <div>
+                  <label class="field-label">週數／天數</label>
+                  <input id="msWeek" type="text" placeholder="例如：第24週 / 產後第3天" class="input-field" />
+                </div>
+              </div>
+              <div>
+                <label class="field-label">事件內容</label>
+                <input id="msContent" type="text" required placeholder="例如：產檢確認雙頭位" class="input-field" />
+              </div>
+              <div>
+                <label class="field-label">適用對象</label>
+                <select id="msTarget" required class="input-field">
+                  <option value="" disabled selected>請選擇</option>
+                  <option value="pregnancy">孕期/共通</option>
+                  <option value="babyA">大寶 (Baby A)</option>
+                  <option value="babyB">二寶 (Baby B)</option>
+                </select>
+              </div>
+              <div>
+                <label class="field-label">超音波照片（選填，可直接拍照）</label>
+                <input id="msPhoto" type="file" accept="image/*" capture="environment" class="input-field" />
+              </div>
+              <button id="msSubmitBtn" type="submit" class="press-fx w-full py-3.5 rounded-2xl text-white font-bold" style="background:var(--clay)">＋ 新增里程碑</button>
+            </form>
+          </div>
+
+          <div class="card p-5">
+            <div class="eyebrow"><span>🗓️</span>完整時間軸（含快速紀錄）<span id="timelineCount" class="count-badge"></span></div>
+            <div id="timelineList"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== 必買清單 ===================== -->
+      <section id="tab-checklist" class="hidden">
+        <div class="grid gap-6 md:grid-cols-[360px_1fr] md:items-start">
+          <div class="space-y-4">
+            <div class="card p-5">
+              <div class="eyebrow"><span>📈</span>採購進度</div>
+              <p id="checklistProgressLabel" class="text-sm font-bold mb-2" style="color:var(--clay-deep)"></p>
+              <div class="progress-track"><div id="checklistProgressBar" class="progress-fill" style="width:0%"></div></div>
+              <p class="text-[11px] mt-3 leading-relaxed" style="color:var(--ink-soft)">清單已依據雙胞胎新生兒常見必買品項預先建立，可直接打勾「已購買」或「不需要」，也能自行新增項目。</p>
+            </div>
+            <div class="card p-5">
+              <div class="eyebrow"><span>✏️</span>新增自訂項目</div>
+              <form id="checklistForm" class="space-y-3" onsubmit="handleAddChecklistItem(event)">
+                <div>
+                  <label class="field-label">分類</label>
+                  <input id="clCategory" list="clCategoryOptions" type="text" required placeholder="例如：哺乳/餵奶用品" class="input-field" />
+                  <datalist id="clCategoryOptions">
+                    <option value="哺乳/餵奶用品"></option>
+                    <option value="尿布清潔消耗品"></option>
+                    <option value="睡眠寢具"></option>
+                    <option value="雙胞胎出行用品"></option>
+                    <option value="媽媽產後用品"></option>
+                    <option value="衣物與清潔"></option>
+                    <option value="其他"></option>
+                  </datalist>
+                </div>
+                <div>
+                  <label class="field-label">品項名稱</label>
+                  <input id="clItemName" type="text" required placeholder="例如：防脹氣奶瓶" class="input-field" />
+                </div>
+                <div>
+                  <label class="field-label">適用對象</label>
+                  <select id="clTarget" required class="input-field">
+                    <option value="pregnancy" selected>孕期/共通</option>
+                    <option value="babyA">大寶 (Baby A)</option>
+                    <option value="babyB">二寶 (Baby B)</option>
+                  </select>
+                </div>
+                <button type="submit" class="press-fx w-full py-3 rounded-2xl text-white font-bold" style="background:var(--clay)">＋ 新增項目</button>
+              </form>
+            </div>
+          </div>
+
+          <div class="card p-5">
+            <div class="eyebrow"><span>✅</span>必買清單<span id="checklistCount" class="count-badge"></span></div>
+            <div id="checklistList"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== 媽媽禮與生育福利 ===================== -->
+      <section id="tab-benefits" class="hidden">
+        <div class="grid gap-6 md:grid-cols-[360px_1fr] md:items-start">
+          <div class="card p-5">
+            <div class="eyebrow"><span>✏️</span>新增媽媽禮／補助</div>
+            <form id="benefitForm" class="space-y-3" onsubmit="handleAddBenefit(event)">
+              <div>
+                <label class="field-label">名稱</label>
+                <input id="bnName" type="text" required placeholder="例如：中央生育給付" class="input-field" />
+              </div>
+              <div>
+                <label class="field-label">類型</label>
+                <select id="bnType" required class="input-field">
+                  <option value="中央政府">中央政府</option>
+                  <option value="地方政府">地方政府</option>
+                  <option value="社會保險">社會保險（勞保/國保/農保）</option>
+                  <option value="職場給付">職場給付（育嬰留停）</option>
+                  <option value="其他（醫院/廠商）">其他（醫院/廠商）</option>
+                </select>
+              </div>
+              <div>
+                <label class="field-label">金額／內容</label>
+                <input id="bnAmount" type="text" placeholder="例如：雙胞胎 20 萬元" class="input-field" />
+              </div>
+              <div>
+                <label class="field-label">申請條件</label>
+                <input id="bnCondition" type="text" placeholder="例如：需設籍滿一年" class="input-field" />
+              </div>
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="field-label">申請期限（選填）</label>
+                  <input id="bnDeadline" type="date" class="input-field" />
+                </div>
+                <div>
+                  <label class="field-label">適用對象</label>
+                  <select id="bnTarget" required class="input-field">
+                    <option value="pregnancy" selected>孕期/共通</option>
+                    <option value="babyA">大寶 (Baby A)</option>
+                    <option value="babyB">二寶 (Baby B)</option>
+                  </select>
+                </div>
+              </div>
+              <button type="submit" class="press-fx w-full py-3 rounded-2xl text-white font-bold" style="background:var(--clay)">＋ 新增</button>
+            </form>
+          </div>
+
+          <div class="card p-5">
+            <div class="eyebrow"><span>🎁</span>媽媽禮與生育福利<span id="benefitCount" class="count-badge"></span></div>
+            <p class="text-[11px] mb-3 leading-relaxed" style="color:var(--ink-soft)">已預先建立台灣 2026 年常見生育相關補助項目（實際金額與資格請以各單位最新公告為準）。</p>
+            <div id="benefitList" class="space-y-2.5"></div>
+          </div>
+        </div>
+      </section>
+
+      <footer class="mt-8 md:hidden">
+        <div class="card p-4 space-y-3">
+          <div class="flex gap-3">
+            <button onclick="exportData()" class="press-fx flex-1 py-3 rounded-2xl font-bold text-sm" style="background:var(--cream-deep);color:var(--ink)">⬇️ 匯出</button>
+            <label class="press-fx flex-1 py-3 rounded-2xl font-bold text-sm text-center cursor-pointer" style="background:var(--cream-deep);color:var(--ink)">
+              ⬆️ 匯入
+              <input type="file" accept="application/json" class="hidden" onchange="handleImportFile(event)" />
+            </label>
+            <button onclick="logout()" class="press-fx flex-1 py-3 rounded-2xl font-bold text-sm" style="background:#F5E1DE;color:#B5453D">登出</button>
+          </div>
+          <p class="text-xs text-center tracking-wide" style="color:var(--ink-soft)">資料已即時同步至雲端，登入同帳號即可跨裝置查看 💛</p>
+        </div>
+      </footer>
+    </main>
+  </div>
+</div>
+
+<!-- ============ 共用 Modal ============ -->
+<div id="modalOverlay" class="hidden fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
+  <div id="modalBox" class="w-full max-w-sm rounded-[1.5rem] p-6" style="background:var(--card)">
+    <div id="modalContent"></div>
+  </div>
+</div>
+
+<script>
+/* =========================================================================
+   雙胞胎懷孕至產後花費與里程碑紀錄器（Supabase 雲端同步版 + 必買清單 + 媽媽禮）
+   ========================================================================= */
+
+/* !!!!!!!!!! 請把下面兩行換成你自己 Supabase 專案的值 !!!!!!!!!! */
+const SUPABASE_URL = 'https://krkiyxiunlgevylmumul.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_8Upde2VIEHJkB8lxy3GKmg_BwYTWSG3';
+/* !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! */
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const PHOTO_BUCKET = 'ultrasound-photos';
+
+const CATEGORIES = [
+  { value: 'medical',      label: '醫療產檢（含自費項目）', color: '#C9895D' },
+  { value: 'postpartum',   label: '月子中心/產後照護',       color: '#AD7A4E' },
+  { value: 'nutrition',    label: '孕期營養品',              color: '#B7A26B' },
+  { value: 'babygoods',    label: '寶寶用品（大型/共通）',   color: '#8FA377' },
+  { value: 'consumables',  label: '尿布奶粉（消耗品）',       color: '#7392B5' },
+  { value: 'misc',         label: '雜項',                    color: '#B08AA0' },
+];
+const TARGETS = [
+  { value: 'pregnancy', label: '孕期/共通',      hex: '#8FA377' },
+  { value: 'babyA',     label: '大寶 (Baby A)',  hex: '#7392B5' },
+  { value: 'babyB',     label: '二寶 (Baby B)',  hex: '#C6919B' },
+];
+
+/* 2026 年（截至 7/12 前）雙胞胎新生兒常見必買品項預設清單 */
+const DEFAULT_CHECKLIST = [
+  { category:'哺乳/餵奶用品', item_name:'奶瓶（建議6-8支，雙胞胎份量）' },
+  { category:'哺乳/餵奶用品', item_name:'奶瓶消毒鍋／烘乾機' },
+  { category:'哺乳/餵奶用品', item_name:'溫奶器' },
+  { category:'哺乳/餵奶用品', item_name:'雙邊電動擠乳器' },
+  { category:'哺乳/餵奶用品', item_name:'母乳袋／儲存瓶' },
+  { category:'哺乳/餵奶用品', item_name:'雙胞胎哺乳枕' },
+  { category:'哺乳/餵奶用品', item_name:'奶瓶刷／清潔劑' },
+  { category:'尿布清潔消耗品', item_name:'新生兒尿布（建議NB/S各先買一小包試用）' },
+  { category:'尿布清潔消耗品', item_name:'濕紙巾（大量備貨）' },
+  { category:'尿布清潔消耗品', item_name:'屁屁膏／護臀霜' },
+  { category:'尿布清潔消耗品', item_name:'嬰兒沐浴乳／洗髮精' },
+  { category:'尿布清潔消耗品', item_name:'紗布巾／口水巾（建議多條替換）' },
+  { category:'睡眠寢具', item_name:'嬰兒床或床中床 ×2（建議各自獨立睡眠空間）' },
+  { category:'睡眠寢具', item_name:'包巾／防踢被' },
+  { category:'睡眠寢具', item_name:'床包／寢具組' },
+  { category:'雙胞胎出行用品', item_name:'雙人推車（並排或前後式）' },
+  { category:'雙胞胎出行用品', item_name:'雙人份汽車安全座椅' },
+  { category:'雙胞胎出行用品', item_name:'雙胞胎專用背巾／揹巾 ×2' },
+  { category:'雙胞胎出行用品', item_name:'大容量媽媽包' },
+  { category:'媽媽產後用品', item_name:'產後束腹帶' },
+  { category:'媽媽產後用品', item_name:'溢乳墊' },
+  { category:'媽媽產後用品', item_name:'產褥墊／產褥棉' },
+  { category:'媽媽產後用品', item_name:'生理褲' },
+  { category:'衣物與清潔', item_name:'新生兒蝴蝶衣／包屁衣（各5-6件，雙倍準備）' },
+  { category:'衣物與清潔', item_name:'推車雨罩／防蚊罩' },
+  { category:'衣物與清潔', item_name:'指甲剪／棉花棒' },
+  { category:'衣物與清潔', item_name:'體溫計' },
+];
+
+/* 2026 年（截至 7/12 前）台灣常見生育相關補助／媽媽禮預設清單，實際請以最新公告為準 */
+const DEFAULT_BENEFITS = [
+  { name:'中央生育給付（雙胞胎20萬）', type:'中央政府', amount:'雙胞胎共20萬元（每胎10萬元）', condition_text:'2026/1/1後出生之新生兒，不限父母保險身份，不排富', deadline:null },
+  { name:'育兒津貼（第一胎5,000／第二胎6,000元）', type:'中央政府', amount:'依胎次每月發放，雙胞胎各自計算胎次', condition_text:'0至未滿5歲，未同時領取托育補助或接受公共化托育，建議出生後60天內申請可追溯當月', deadline:null },
+  { name:'縣市生育津貼（地方加碼）', type:'地方政府', amount:'依戶籍縣市而定（數千至數萬元）', condition_text:'依戶籍地規定，通常需父母一方設籍滿一定期間，多在出生後1-6個月內申請', deadline:null },
+  { name:'勞保／國保／農保生育給付', type:'社會保險', amount:'依投保薪資計算，雙胞胎按比例增加（4個月給付）', condition_text:'生產當時仍為被保險人身份，需於5年內申請', deadline:null },
+  { name:'育嬰留職停薪津貼', type:'職場給付', amount:'平均月投保薪資80%（最長6個月，父母各自可申請）', condition_text:'需辦理留職停薪且符合保險年資規定', deadline:null },
+  { name:'醫院／月子中心媽媽教室好孕禮', type:'其他（醫院/廠商）', amount:'試用包、優惠券、彌月禮等（依各院所而定）', condition_text:'完成媽媽教室課程或以孕婦健康手冊登記', deadline:null },
+];
+
+let currentUser = null;
+let expenses = [];
+let timeline = [];
+let checklistItems = [];
+let benefits = [];
+let categoryChartInstance = null;
+let targetChartInstance = null;
+
+function genId(){ return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+function pad2(n){ return n.toString().padStart(2, '0'); }
+function formatDateObj(d){ return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`; }
+function formatTimeObj(d){ return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`; }
+function getCategoryInfo(value){ return CATEGORIES.find(c => c.value === value) || { label:'未分類', color:'#B0A99A' }; }
+function getTargetInfo(value){ return TARGETS.find(t => t.value === value) || { label:'未指定', hex:'#B0A99A' }; }
+function money(n){ return '$' + Number(n || 0).toLocaleString('zh-Hant-TW'); }
+function mapTimelineRow(r){ return { id:r.id, date:r.date, time:r.time||'', weekLabel:r.week_label||'', content:r.content, target:r.target, type:r.type, photoPath:r.photo_path||null }; }
+function mapExpenseRow(r){ return { id:r.id, amount:Number(r.amount), date:r.date, note:r.note, target:r.target, category:r.category }; }
+function mapChecklistRow(r){ return { id:r.id, category:r.category, itemName:r.item_name, target:r.target, status:r.status }; }
+function mapBenefitRow(r){ return { id:r.id, name:r.name, type:r.type, amount:r.amount||'', condition:r.condition_text||'', deadline:r.deadline||null, target:r.target, status:r.status }; }
+
+/* ===== Chart.js 中央總額文字外掛 ===== */
+const centerTextPlugin = {
+  id: 'centerText',
+  afterDraw(chart, args, opts){
+    if(!opts || !opts.text) return;
+    const { ctx, chartArea } = chart;
+    if(!chartArea) return;
+    const { width, height, top, left } = chartArea;
+    ctx.save();
+    ctx.font = "700 15px 'Noto Serif TC', serif";
+    ctx.fillStyle = '#40301F';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(opts.text, left + width/2, top + height/2 - 6);
+    ctx.font = "600 10px 'Noto Sans TC', sans-serif";
+    ctx.fillStyle = '#948269';
+    ctx.fillText(opts.subtext || '', left + width/2, top + height/2 + 12);
+    ctx.restore();
+  }
+};
+Chart.register(centerTextPlugin);
+
+/* ========================= 登入 / 登出 ========================= */
+async function initAuth(){
+  const { data: { session } } = await sb.auth.getSession();
+  if(session){ await onLoggedIn(session); } else { showAuthScreen(); }
+
+  sb.auth.onAuthStateChange(async (event, session) => {
+    if(session){ await onLoggedIn(session); } else { showAuthScreen(); }
+  });
+
+  document.getElementById('loginForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('loginEmail').value.trim();
+    const password = document.getElementById('loginPassword').value;
+    const errEl = document.getElementById('loginError');
+    const btn = document.getElementById('loginSubmitBtn');
+    errEl.textContent = '';
+    btn.disabled = true; btn.textContent = '登入中…';
+    const { error } = await sb.auth.signInWithPassword({ email, password });
+    btn.disabled = false; btn.textContent = '登入';
+    if(error){ errEl.textContent = '登入失敗：帳號或密碼錯誤，請確認 Supabase 是否已建立此帳號。'; }
+  });
+}
+
+function showAuthScreen(){
+  document.getElementById('authScreen').classList.remove('hidden');
+  document.getElementById('appRoot').classList.add('hidden');
+}
+
+async function onLoggedIn(session){
+  currentUser = session.user;
+  document.getElementById('authScreen').classList.add('hidden');
+  document.getElementById('appRoot').classList.remove('hidden');
+  document.getElementById('userEmailLabel').textContent = currentUser.email || '';
+
+  const today = formatDateObj(new Date());
+  document.getElementById('expDate').value = today;
+  document.getElementById('msDate').value = today;
+
+  await loadAllData();
+  showTab('overview');
+}
+
+async function logout(){
+  if(!confirm('確定要登出嗎？')) return;
+  await sb.auth.signOut();
+}
+
+/* ========================= 讀取雲端資料 ========================= */
+async function loadAllData(){
+  const { data: expData, error: expErr } = await sb.from('expenses').select('*').order('date', { ascending:false }).order('created_at', { ascending:false });
+  if(expErr){ alert('讀取花費資料失敗：' + expErr.message); }
+  expenses = (expData || []).map(mapExpenseRow);
+
+  const { data: tlData, error: tlErr } = await sb.from('timeline_events').select('*').order('date', { ascending:false }).order('created_at', { ascending:false });
+  if(tlErr){ alert('讀取時間軸資料失敗：' + tlErr.message); }
+  timeline = (tlData || []).map(mapTimelineRow);
+
+  const { data: clData, error: clErr } = await sb.from('checklist_items').select('*').order('created_at', { ascending:true });
+  if(clErr){ alert('讀取必買清單失敗：' + clErr.message); }
+  checklistItems = (clData || []).map(mapChecklistRow);
+
+  const { data: bnData, error: bnErr } = await sb.from('benefits').select('*').order('created_at', { ascending:true });
+  if(bnErr){ alert('讀取媽媽禮資料失敗：' + bnErr.message); }
+  benefits = (bnData || []).map(mapBenefitRow);
+
+  await maybeSeedDefaults();
+
+  renderExpenses();
+  await renderTimeline();
+  renderChecklist();
+  renderBenefits();
+}
+
+/* 首次登入時，若清單與福利表尚無資料，自動帶入建議的預設項目（僅嘗試一次，避免使用者清空後又被重新塞入） */
+async function maybeSeedDefaults(){
+  const seededKey = `twinTracker_seeded_${currentUser.id}`;
+  if(localStorage.getItem(seededKey)) return;
+
+  if(checklistItems.length === 0){
+    const rows = DEFAULT_CHECKLIST.map(x => ({ category: x.category, item_name: x.item_name, target: 'pregnancy' }));
+    const { data, error } = await sb.from('checklist_items').insert(rows).select();
+    if(!error && data){ checklistItems = data.map(mapChecklistRow); }
+  }
+  if(benefits.length === 0){
+    const rows = DEFAULT_BENEFITS.map(x => ({ name: x.name, type: x.type, amount: x.amount, condition_text: x.condition_text, deadline: x.deadline, target: 'pregnancy' }));
+    const { data, error } = await sb.from('benefits').insert(rows).select();
+    if(!error && data){ benefits = data.map(mapBenefitRow); }
+  }
+  localStorage.setItem(seededKey, '1');
+}
+
+/* ========================= 分頁切換 ========================= */
+function showTab(name){
+  ['overview', 'expense', 'timeline', 'checklist', 'benefits'].forEach(t => {
+    document.getElementById('tab-' + t).classList.toggle('hidden', t !== name);
+  });
+  document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.tab === name));
+  moveTabIndicator(name);
+  if(name === 'overview'){ renderCharts(); }
+}
+function moveTabIndicator(name){
+  const btn = document.querySelector(`#tabNav .nav-btn[data-tab="${name}"]`);
+  const indicator = document.getElementById('tabIndicator');
+  if(!btn || !indicator) return;
+  indicator.style.width = btn.offsetWidth + 'px';
+  indicator.style.transform = `translateX(${btn.offsetLeft}px)`;
+}
+
+/* ========================= 花費模組 ========================= */
+async function handleAddExpense(e){
+  e.preventDefault();
+  const amount = Number(document.getElementById('expAmount').value);
+  const date = document.getElementById('expDate').value;
+  const note = document.getElementById('expNote').value.trim();
+  const target = document.getElementById('expTarget').value;
+  const category = document.getElementById('expCategory').value;
+
+  if(!amount || amount <= 0){ alert('請輸入有效的金額'); return; }
+  if(!date || !note || !target || !category){ alert('請完整填寫所有欄位'); return; }
+
+  const btn = document.getElementById('expSubmitBtn');
+  btn.disabled = true; btn.textContent = '新增中…';
+  const { data, error } = await sb.from('expenses').insert({ amount, date, note, target, category }).select().single();
+  btn.disabled = false; btn.textContent = '＋ 新增花費';
+
+  if(error){ alert('新增失敗：' + error.message); return; }
+
+  expenses.push(mapExpenseRow(data));
+  renderExpenses();
+  document.getElementById('expenseForm').reset();
+  document.getElementById('expDate').value = formatDateObj(new Date());
+}
+
+async function deleteExpense(id){
+  if(!confirm('確定要刪除這筆花費紀錄嗎？')) return;
+  const { error } = await sb.from('expenses').delete().eq('id', id);
+  if(error){ alert('刪除失敗：' + error.message); return; }
+  expenses = expenses.filter(e => e.id !== id);
+  renderExpenses();
+}
+
+function renderExpenses(){
+  const total = expenses.reduce((sum, e) => sum + Number(e.amount), 0);
+  document.getElementById('totalAmount').textContent = money(total);
+
+  const sums = { pregnancy: 0, babyA: 0, babyB: 0 };
+  expenses.forEach(e => { sums[e.target] = (sums[e.target] || 0) + Number(e.amount); });
+  document.getElementById('sumPregnancy').textContent = money(sums.pregnancy);
+  document.getElementById('sumBabyA').textContent = money(sums.babyA);
+  document.getElementById('sumBabyB').textContent = money(sums.babyB);
+
+  const countEl = document.getElementById('expenseCount');
+  if(countEl) countEl.textContent = expenses.length ? `共 ${expenses.length} 筆` : '';
+
+  const listEl = document.getElementById('expenseList');
+  const sorted = [...expenses].sort((a, b) => b.date.localeCompare(a.date));
+
+  if(sorted.length === 0){
+    listEl.innerHTML = `
+      <div class="empty-state">
+        <svg viewBox="0 0 64 40" class="twin-emblem w-10 h-6"><circle cx="24" cy="20" r="15" fill="var(--dusk)"/><circle cx="40" cy="20" r="15" fill="var(--rose)"/></svg>
+        尚無花費紀錄，開始記下第一筆吧 🌱
+      </div>`;
+  } else {
+    listEl.innerHTML = sorted.map(e => {
+      const cat = getCategoryInfo(e.category);
+      const tgt = getTargetInfo(e.target);
+      return `
+        <div class="entry-card fade-in">
+          <div style="position:absolute;left:0;top:0;bottom:0;width:5px;background:${tgt.hex}"></div>
+          <div class="flex items-start justify-between gap-2">
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2 flex-wrap mb-1.5">
+                <span class="badge-target" style="background:${tgt.hex}">${tgt.label}</span>
+                <span class="tag-category"><span class="dot" style="background:${cat.color}"></span>${cat.label}</span>
+              </div>
+              <p class="font-bold truncate">${e.note}</p>
+              <p class="text-xs mt-0.5" style="color:var(--ink-soft)">${e.date}</p>
+            </div>
+            <div class="text-right flex flex-col items-end gap-2 shrink-0">
+              <span class="font-bold font-display" style="color:var(--clay-deep)">${money(e.amount)}</span>
+              <button onclick="deleteExpense('${e.id}')" class="text-xs px-2.5 py-1 rounded-lg font-semibold" style="color:#B5453D;background:#F5E1DE">刪除</button>
+            </div>
+          </div>
+        </div>`;
+    }).join('');
+  }
+  renderCharts();
+}
+
+function renderCharts(){
+  const catEl = document.getElementById('categoryChart');
+  const tgtEl = document.getElementById('targetChart');
+  if(!catEl || !tgtEl) return;
+
+  const total = expenses.reduce((s, e) => s + Number(e.amount), 0);
+
+  const catTotals = {};
+  CATEGORIES.forEach(c => catTotals[c.value] = 0);
+  expenses.forEach(e => { catTotals[e.category] = (catTotals[e.category] || 0) + Number(e.amount); });
+  let catLabels = [], catData = [], catColors = [];
+  CATEGORIES.forEach(c => { if(catTotals[c.value] > 0){ catLabels.push(c.label); catData.push(catTotals[c.value]); catColors.push(c.color); } });
+  if(catData.length === 0){ catLabels = ['尚無資料']; catData = [1]; catColors = ['#ECE0CD']; }
+
+  const tgtTotals = { pregnancy: 0, babyA: 0, babyB: 0 };
+  expenses.forEach(e => { tgtTotals[e.target] = (tgtTotals[e.target] || 0) + Number(e.amount); });
+  let tgtLabels = [], tgtData = [], tgtColors = [];
+  TARGETS.forEach(t => { if(tgtTotals[t.value] > 0){ tgtLabels.push(t.label); tgtData.push(tgtTotals[t.value]); tgtColors.push(t.hex); } });
+  if(tgtData.length === 0){ tgtLabels = ['尚無資料']; tgtData = [1]; tgtColors = ['#ECE0CD']; }
+
+  const baseOptions = (centerText, centerSub) => ({
+    maintainAspectRatio: false, cutout: '64%',
+    plugins: {
+      legend: { position: 'bottom', labels: { color: '#40301F', boxWidth: 12, padding: 10, font: { size: 11 } } },
+      tooltip: { callbacks: { label: (ctx) => `${ctx.label}: ${money(ctx.raw)}` } },
+      centerText: { text: centerText, subtext: centerSub }
+    }
+  });
+
+  if(categoryChartInstance) categoryChartInstance.destroy();
+  categoryChartInstance = new Chart(catEl.getContext('2d'), {
+    type: 'doughnut',
+    data: { labels: catLabels, datasets: [{ data: catData, backgroundColor: catColors, borderColor: '#FFFDF8', borderWidth: 3 }] },
+    options: baseOptions(money(total), '總花費')
+  });
+
+  if(targetChartInstance) targetChartInstance.destroy();
+  targetChartInstance = new Chart(tgtEl.getContext('2d'), {
+    type: 'doughnut',
+    data: { labels: tgtLabels, datasets: [{ data: tgtData, backgroundColor: tgtColors, borderColor: '#FFFDF8', borderWidth: 3 }] },
+    options: baseOptions(money(total), '總花費')
+  });
+}
+
+/* ========================= 照片壓縮與上傳 ========================= */
+function resizeImageToBlob(file, maxDim, quality){
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        let { width, height } = img;
+        if(width > height && width > maxDim){ height = Math.round(height * maxDim / width); width = maxDim; }
+        else if(height > maxDim){ width = Math.round(width * maxDim / height); height = maxDim; }
+        const canvas = document.createElement('canvas');
+        canvas.width = width; canvas.height = height;
+        canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+        canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('壓縮失敗')), 'image/jpeg', quality);
+      };
+      img.onerror = () => reject(new Error('圖片讀取失敗'));
+      img.src = e.target.result;
+    };
+    reader.onerror = () => reject(new Error('檔案讀取失敗'));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function uploadPhoto(file){
+  try{
+    const blob = await resizeImageToBlob(file, 1400, 0.75);
+    const path = `${currentUser.id}/${Date.now()}_${Math.random().toString(36).slice(2, 8)}.jpg`;
+    const { error } = await sb.storage.from(PHOTO_BUCKET).upload(path, blob, { contentType: 'image/jpeg', upsert: false });
+    if(error){ alert('照片上傳失敗：' + error.message); return null; }
+    return path;
+  }catch(err){
+    alert('照片處理失敗，請再試一次');
+    return null;
+  }
+}
+
+/* ========================= 時間軸／里程碑模組 ========================= */
+async function handleAddMilestone(e){
+  e.preventDefault();
+  const date = document.getElementById('msDate').value;
+  const weekLabel = document.getElementById('msWeek').value.trim();
+  const content = document.getElementById('msContent').value.trim();
+  const target = document.getElementById('msTarget').value;
+  const fileInput = document.getElementById('msPhoto');
+  const file = fileInput.files[0];
+
+  if(!date || !content || !target){ alert('請完整填寫日期、事件內容與適用對象'); return; }
+
+  const btn = document.getElementById('msSubmitBtn');
+  btn.disabled = true; btn.textContent = file ? '上傳照片中…' : '新增中…';
+
+  let photoPath = null;
+  if(file){
+    photoPath = await uploadPhoto(file);
+    if(photoPath === null){ btn.disabled = false; btn.textContent = '＋ 新增里程碑'; return; }
+  }
+
+  const { data, error } = await sb.from('timeline_events')
+    .insert({ date, time: '', week_label: weekLabel, content, target, type: 'milestone', photo_path: photoPath })
+    .select().single();
+
+  btn.disabled = false; btn.textContent = '＋ 新增里程碑';
+  if(error){ alert('新增失敗：' + error.message); return; }
+
+  timeline.push(mapTimelineRow(data));
+  await renderTimeline();
+  document.getElementById('milestoneForm').reset();
+  document.getElementById('msDate').value = formatDateObj(new Date());
+}
+
+async function deleteTimelineItem(id){
+  if(!confirm('確定要刪除這筆時間軸紀錄嗎？（若有附加照片也會一併刪除）')) return;
+  const item = timeline.find(t => t.id === id);
+  const { error } = await sb.from('timeline_events').delete().eq('id', id);
+  if(error){ alert('刪除失敗：' + error.message); return; }
+  if(item && item.photoPath){ await sb.storage.from(PHOTO_BUCKET).remove([item.photoPath]); }
+  timeline = timeline.filter(t => t.id !== id);
+  await renderTimeline();
+}
+
+async function renderTimeline(){
+  const container = document.getElementById('timelineList');
+  const sorted = [...timeline].sort((a, b) => {
+    const ka = a.date + 'T' + (a.time || '00:00');
+    const kb = b.date + 'T' + (b.time || '00:00');
+    if(ka !== kb) return ka < kb ? 1 : -1;
+    return 0;
+  });
+
+  const countEl = document.getElementById('timelineCount');
+  if(countEl) countEl.textContent = timeline.length ? `共 ${timeline.length} 筆` : '';
+
+  if(sorted.length === 0){
+    container.innerHTML = `
+      <div class="empty-state">
+        <svg viewBox="0 0 64 40" class="twin-emblem w-10 h-6"><circle cx="24" cy="20" r="15" fill="var(--clay)"/><circle cx="40" cy="20" r="15" fill="var(--gold)"/></svg>
+        尚無時間軸紀錄，快速紀錄或新增里程碑都會顯示在這裡 ⭐
+      </div>`;
+    return;
+  }
+
+  container.innerHTML = `<div class="timeline-line ml-3 pl-7 space-y-4">` +
+    sorted.map(item => {
+      const tgt = getTargetInfo(item.target);
+      const icon = item.type === 'feed' ? '🍼' : item.type === 'diaper' ? '🧷' : '⭐';
+      const timeLabel = item.time ? `${item.date}　${item.time}` : item.date;
+      const photoBlock = item.photoPath ? `
+        <div class="mt-2.5">
+          <img id="photo-${item.id}" class="thumb hidden" onclick="openPhotoLightbox('${item.id}')" alt="超音波照片" />
+          <div id="photoLoad-${item.id}" class="flex items-center gap-2 text-xs" style="color:var(--ink-soft)"><span class="spinner"></span>照片載入中…</div>
+        </div>` : '';
+      return `
+        <div class="relative fade-in">
+          <span class="timeline-dot" style="background:${tgt.hex}"></span>
+          <div class="entry-card" style="padding-left:1rem">
+            <div style="position:absolute;left:0;top:0;bottom:0;width:5px;background:${tgt.hex}"></div>
+            <div class="flex items-center justify-between gap-2 flex-wrap mb-1.5">
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="badge-target" style="background:${tgt.hex}">${tgt.label}</span>
+                ${item.weekLabel ? `<span class="tag-category"><span class="dot" style="background:var(--gold)"></span>${item.weekLabel}</span>` : ''}
+              </div>
+              <button onclick="deleteTimelineItem('${item.id}')" class="text-xs px-2.5 py-1 rounded-lg font-semibold" style="color:#B5453D;background:#F5E1DE">刪除</button>
+            </div>
+            <p class="font-bold">${icon} ${item.content}</p>
+            <p class="text-xs mt-0.5" style="color:var(--ink-soft)">${timeLabel}</p>
+            ${photoBlock}
+          </div>
+        </div>`;
+    }).join('') +
+  `</div>`;
+
+  const withPhotos = sorted.filter(i => i.photoPath);
+  await Promise.all(withPhotos.map(async item => {
+    const { data, error } = await sb.storage.from(PHOTO_BUCKET).createSignedUrl(item.photoPath, 3600);
+    const imgEl = document.getElementById('photo-' + item.id);
+    const loadEl = document.getElementById('photoLoad-' + item.id);
+    if(error || !data){ if(loadEl) loadEl.textContent = '照片載入失敗'; return; }
+    if(imgEl){ imgEl.src = data.signedUrl; imgEl.dataset.full = data.signedUrl; imgEl.classList.remove('hidden'); }
+    if(loadEl) loadEl.remove();
+  }));
+}
+
+function openPhotoLightbox(id){
+  const imgEl = document.getElementById('photo-' + id);
+  if(!imgEl || !imgEl.dataset.full) return;
+  openModal(`
+    <img src="${imgEl.dataset.full}" class="w-full rounded-xl mb-4" alt="超音波照片放大檢視" />
+    <button onclick="closeModal()" class="w-full py-2.5 rounded-xl font-bold" style="background:var(--cream-deep);color:var(--ink)">關閉</button>
+  `);
+}
+
+async function addTimelineEntry(partial){
+  const row = { date: partial.date, time: partial.time || '', week_label: partial.weekLabel || '', content: partial.content, target: partial.target, type: partial.type, photo_path: partial.photoPath || null };
+  const { data, error } = await sb.from('timeline_events').insert(row).select().single();
+  if(error){ alert('紀錄失敗：' + error.message); return; }
+  timeline.push(mapTimelineRow(data));
+  await renderTimeline();
+}
+
+/* ========================= 必買清單模組 ========================= */
+async function handleAddChecklistItem(e){
+  e.preventDefault();
+  const category = document.getElementById('clCategory').value.trim();
+  const itemName = document.getElementById('clItemName').value.trim();
+  const target = document.getElementById('clTarget').value;
+  if(!category || !itemName){ alert('請填寫分類與品項名稱'); return; }
+
+  const { data, error } = await sb.from('checklist_items').insert({ category, item_name: itemName, target }).select().single();
+  if(error){ alert('新增失敗：' + error.message); return; }
+  checklistItems.push(mapChecklistRow(data));
+  renderChecklist();
+  document.getElementById('checklistForm').reset();
+  document.getElementById('clTarget').value = 'pregnancy';
+}
+
+async function setChecklistStatus(id, status){
+  const { error } = await sb.from('checklist_items').update({ status }).eq('id', id);
+  if(error){ alert('更新失敗：' + error.message); return; }
+  const item = checklistItems.find(i => i.id === id);
+  if(item) item.status = status;
+  renderChecklist();
+}
+
+async function deleteChecklistItem(id){
+  if(!confirm('確定要刪除這個項目嗎？')) return;
+  const { error } = await sb.from('checklist_items').delete().eq('id', id);
+  if(error){ alert('刪除失敗：' + error.message); return; }
+  checklistItems = checklistItems.filter(i => i.id !== id);
+  renderChecklist();
+}
+
+function renderChecklist(){
+  const countEl = document.getElementById('checklistCount');
+  if(countEl) countEl.textContent = checklistItems.length ? `共 ${checklistItems.length} 項` : '';
+
+  const total = checklistItems.length;
+  const notNeeded = checklistItems.filter(i => i.status === 'not_needed').length;
+  const bought = checklistItems.filter(i => i.status === 'bought').length;
+  const needCount = total - notNeeded;
+  const pct = needCount > 0 ? Math.round((bought / needCount) * 100) : 0;
+  const progLabel = document.getElementById('checklistProgressLabel');
+  const progBar = document.getElementById('checklistProgressBar');
+  if(progLabel) progLabel.textContent = `已購買 ${bought} / 應買 ${needCount} 項${notNeeded ? `（另有 ${notNeeded} 項標記不需要）` : ''}`;
+  if(progBar) progBar.style.width = pct + '%';
+
+  const listEl = document.getElementById('checklistList');
+  if(checklistItems.length === 0){
+    listEl.innerHTML = `
+      <div class="empty-state">
+        <svg viewBox="0 0 64 40" class="twin-emblem w-10 h-6"><circle cx="24" cy="20" r="15" fill="var(--clay)"/><circle cx="40" cy="20" r="15" fill="var(--gold)"/></svg>
+        尚無清單項目，新增你需要的必買品項吧 📝
+      </div>`;
+    return;
+  }
+
+  const groups = {};
+  checklistItems.forEach(i => { (groups[i.category] = groups[i.category] || []).push(i); });
+
+  listEl.innerHTML = Object.keys(groups).map(cat => {
+    const items = groups[cat];
+    return `
+      <div class="checklist-group-title"><span>▸</span>${cat}</div>
+      <div class="space-y-2 mb-3">
+        ${items.map(item => {
+          const tgt = getTargetInfo(item.target);
+          const strike = item.status === 'not_needed' ? 'line-through opacity-50' : '';
+          return `
+            <div class="entry-card fade-in" style="padding-left:1rem">
+              <div style="position:absolute;left:0;top:0;bottom:0;width:5px;background:${tgt.hex}"></div>
+              <div class="flex items-center justify-between gap-3 flex-wrap">
+                <div class="flex-1 min-w-[140px]">
+                  <span class="badge-target mb-1" style="background:${tgt.hex}">${tgt.label}</span>
+                  <p class="font-bold text-sm mt-1 ${strike}">${item.itemName}</p>
+                </div>
+                <div class="flex items-center gap-3 shrink-0">
+                  <label class="check-label">
+                    <input type="checkbox" ${item.status === 'bought' ? 'checked' : ''} onchange="setChecklistStatus('${item.id}', this.checked ? 'bought' : 'needed')" />
+                    已購買
+                  </label>
+                  <label class="check-label">
+                    <input type="checkbox" ${item.status === 'not_needed' ? 'checked' : ''} onchange="setChecklistStatus('${item.id}', this.checked ? 'not_needed' : 'needed')" />
+                    不需要
+                  </label>
+                  <button onclick="deleteChecklistItem('${item.id}')" class="text-xs px-2 py-1 rounded-lg font-semibold" style="color:#B5453D;background:#F5E1DE">刪除</button>
+                </div>
+              </div>
+            </div>`;
+        }).join('')}
+      </div>`;
+  }).join('');
+}
+
+/* ========================= 媽媽禮／生育福利模組 ========================= */
+async function handleAddBenefit(e){
+  e.preventDefault();
+  const name = document.getElementById('bnName').value.trim();
+  const type = document.getElementById('bnType').value;
+  const amount = document.getElementById('bnAmount').value.trim();
+  const condition_text = document.getElementById('bnCondition').value.trim();
+  const deadline = document.getElementById('bnDeadline').value || null;
+  const target = document.getElementById('bnTarget').value;
+
+  if(!name || !type){ alert('請填寫名稱與類型'); return; }
+
+  const { data, error } = await sb.from('benefits').insert({ name, type, amount, condition_text, deadline, target }).select().single();
+  if(error){ alert('新增失敗：' + error.message); return; }
+  benefits.push(mapBenefitRow(data));
+  renderBenefits();
+  document.getElementById('benefitForm').reset();
+  document.getElementById('bnTarget').value = 'pregnancy';
+}
+
+async function setBenefitStatus(id, status){
+  const { error } = await sb.from('benefits').update({ status }).eq('id', id);
+  if(error){ alert('更新失敗：' + error.message); return; }
+  const item = benefits.find(b => b.id === id);
+  if(item) item.status = status;
+  renderBenefits();
+}
+
+async function deleteBenefit(id){
+  if(!confirm('確定要刪除這筆福利／媽媽禮紀錄嗎？')) return;
+  const { error } = await sb.from('benefits').delete().eq('id', id);
+  if(error){ alert('刪除失敗：' + error.message); return; }
+  benefits = benefits.filter(b => b.id !== id);
+  renderBenefits();
+}
+
+function deadlineLabel(dateStr){
+  if(!dateStr) return '';
+  const today = new Date(); today.setHours(0,0,0,0);
+  const d = new Date(dateStr + 'T00:00:00');
+  const diffDays = Math.round((d - today) / (1000 * 60 * 60 * 24));
+  if(diffDays < 0) return `<span class="deadline-over">已逾期 ${Math.abs(diffDays)} 天（期限 ${dateStr}）</span>`;
+  if(diffDays === 0) return `<span class="deadline-over">今天截止！</span>`;
+  if(diffDays <= 30) return `<span class="deadline-soon">尚餘 ${diffDays} 天（期限 ${dateStr}）</span>`;
+  return `<span class="deadline-ok">期限：${dateStr}</span>`;
+}
+
+const BENEFIT_STATUS_LABELS = {
+  not_applied: '未申請', applied: '已申請', received: '已領取', not_eligible: '不符資格'
+};
+
+function renderBenefits(){
+  const countEl = document.getElementById('benefitCount');
+  if(countEl) countEl.textContent = benefits.length ? `共 ${benefits.length} 筆` : '';
+
+  const listEl = document.getElementById('benefitList');
+  if(benefits.length === 0){
+    listEl.innerHTML = `
+      <div class="empty-state">
+        <svg viewBox="0 0 64 40" class="twin-emblem w-10 h-6"><circle cx="24" cy="20" r="15" fill="var(--clay)"/><circle cx="40" cy="20" r="15" fill="var(--gold)"/></svg>
+        尚無媽媽禮／補助紀錄
+      </div>`;
+    return;
+  }
+
+  const sorted = [...benefits].sort((a, b) => {
+    if(a.deadline && b.deadline) return a.deadline.localeCompare(b.deadline);
+    if(a.deadline) return -1;
+    if(b.deadline) return 1;
+    return 0;
+  });
+
+  listEl.innerHTML = sorted.map(item => {
+    const tgt = getTargetInfo(item.target);
+    return `
+      <div class="entry-card fade-in">
+        <div style="position:absolute;left:0;top:0;bottom:0;width:5px;background:${tgt.hex}"></div>
+        <div class="flex items-start justify-between gap-2 flex-wrap">
+          <div class="flex-1 min-w-[180px]">
+            <div class="flex items-center gap-2 flex-wrap mb-1.5">
+              <span class="badge-target" style="background:${tgt.hex}">${tgt.label}</span>
+              <span class="badge-type">${item.type}</span>
+            </div>
+            <p class="font-bold">${item.name}</p>
+            ${item.amount ? `<p class="text-sm mt-0.5" style="color:var(--clay-deep)">💰 ${item.amount}</p>` : ''}
+            ${item.condition ? `<p class="text-xs mt-1" style="color:var(--ink-soft)">條件：${item.condition}</p>` : ''}
+            ${item.deadline ? `<p class="text-xs mt-1">${deadlineLabel(item.deadline)}</p>` : ''}
+          </div>
+          <div class="flex flex-col items-end gap-2 shrink-0">
+            <select class="status-select" onchange="setBenefitStatus('${item.id}', this.value)">
+              ${Object.keys(BENEFIT_STATUS_LABELS).map(k => `<option value="${k}" ${item.status === k ? 'selected' : ''}>${BENEFIT_STATUS_LABELS[k]}</option>`).join('')}
+            </select>
+            <button onclick="deleteBenefit('${item.id}')" class="text-xs px-2.5 py-1 rounded-lg font-semibold" style="color:#B5453D;background:#F5E1DE">刪除</button>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+/* ========================= 快速紀錄 Modal ========================= */
+function openModal(html){
+  document.getElementById('modalContent').innerHTML = html;
+  document.getElementById('modalOverlay').classList.remove('hidden');
+}
+function closeModal(){
+  document.getElementById('modalOverlay').classList.add('hidden');
+  document.getElementById('modalContent').innerHTML = '';
+}
+
+function openFeedModal(target){
+  const tgt = getTargetInfo(target);
+  openModal(`
+    <h3 class="font-display text-lg font-bold mb-4" style="color:${tgt.hex}">🍼 ${tgt.label} 喝奶</h3>
+    <label class="field-label">奶量 (ml)</label>
+    <input id="feedAmountInput" type="number" inputmode="numeric" value="120" class="input-field text-center text-lg mb-3" />
+    <div class="grid grid-cols-4 gap-2 mb-4">
+      ${[60, 90, 120, 150].map(v => `<button type="button" onclick="document.getElementById('feedAmountInput').value=${v}" class="press-fx py-2 rounded-xl text-sm font-bold" style="background:var(--cream-deep)">${v}</button>`).join('')}
+    </div>
+    <div class="flex gap-2">
+      <button onclick="closeModal()" class="press-fx flex-1 py-2.5 rounded-xl font-bold" style="background:var(--cream-deep);color:var(--ink)">取消</button>
+      <button onclick="confirmFeed('${target}')" class="press-fx flex-1 py-2.5 rounded-xl font-bold text-white" style="background:${tgt.hex}">確認紀錄</button>
+    </div>
+  `);
+}
+async function confirmFeed(target){
+  const amountInput = document.getElementById('feedAmountInput');
+  const amount = amountInput.value && Number(amountInput.value) > 0 ? amountInput.value : '0';
+  const now = new Date();
+  closeModal();
+  await addTimelineEntry({ target, type: 'feed', content: `喝奶 ${amount}ml`, date: formatDateObj(now), time: formatTimeObj(now) });
+}
+
+function openDiaperModal(target){
+  const tgt = getTargetInfo(target);
+  openModal(`
+    <h3 class="font-display text-lg font-bold mb-4" style="color:${tgt.hex}">🧷 ${tgt.label} 換尿布</h3>
+    <div class="flex flex-col gap-2 mb-3">
+      <button onclick="confirmDiaper('${target}','小便')" class="press-fx py-3 rounded-xl font-bold text-left px-4" style="background:var(--cream-deep)">💧　小便</button>
+      <button onclick="confirmDiaper('${target}','大便')" class="press-fx py-3 rounded-xl font-bold text-left px-4" style="background:var(--cream-deep)">💩　大便</button>
+      <button onclick="confirmDiaper('${target}','小便+大便')" class="press-fx py-3 rounded-xl font-bold text-left px-4" style="background:var(--cream-deep)">💧💩　小便+大便</button>
+    </div>
+    <button onclick="closeModal()" class="w-full py-2 rounded-xl font-bold" style="color:var(--ink-soft)">取消</button>
+  `);
+}
+async function confirmDiaper(target, kind){
+  const now = new Date();
+  closeModal();
+  await addTimelineEntry({ target, type: 'diaper', content: `換尿布－${kind}`, date: formatDateObj(now), time: formatTimeObj(now) });
+}
+
+document.getElementById('modalOverlay').addEventListener('click', function(e){ if(e.target === this) closeModal(); });
+
+/* ========================= 匯出／匯入備份 ========================= */
+function exportData(){
+  const payload = { exportedAt: new Date().toISOString(), expenses, timeline, checklistItems, benefits };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `雙胞胎紀錄備份_${formatDateObj(new Date())}.json`;
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function handleImportFile(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = async (ev) => {
+    try{
+      const data = JSON.parse(ev.target.result);
+      const hasAny = Array.isArray(data.expenses) || Array.isArray(data.timeline) || Array.isArray(data.checklistItems) || Array.isArray(data.benefits);
+      if(!hasAny) throw new Error('格式不符');
+      if(!confirm('匯入將把備份檔內容「新增」到目前雲端資料庫（不會刪除現有資料），確定要繼續嗎？')){ e.target.value = ''; return; }
+
+      if(Array.isArray(data.expenses) && data.expenses.length){
+        const rows = data.expenses.map(x => ({ amount: x.amount, date: x.date, note: x.note, target: x.target, category: x.category }));
+        const { error } = await sb.from('expenses').insert(rows);
+        if(error) throw error;
+      }
+      if(Array.isArray(data.timeline) && data.timeline.length){
+        const rows = data.timeline.map(x => ({ date: x.date, time: x.time || '', week_label: x.weekLabel || '', content: x.content, target: x.target, type: x.type || 'milestone' }));
+        const { error } = await sb.from('timeline_events').insert(rows);
+        if(error) throw error;
+      }
+      if(Array.isArray(data.checklistItems) && data.checklistItems.length){
+        const rows = data.checklistItems.map(x => ({ category: x.category, item_name: x.itemName || x.item_name, target: x.target || 'pregnancy', status: x.status || 'needed' }));
+        const { error } = await sb.from('checklist_items').insert(rows);
+        if(error) throw error;
+      }
+      if(Array.isArray(data.benefits) && data.benefits.length){
+        const rows = data.benefits.map(x => ({ name: x.name, type: x.type, amount: x.amount, condition_text: x.condition || x.condition_text, deadline: x.deadline, target: x.target || 'pregnancy', status: x.status || 'not_applied' }));
+        const { error } = await sb.from('benefits').insert(rows);
+        if(error) throw error;
+      }
+      await loadAllData();
+      alert('匯入成功！（提醒：舊備份檔內的照片附件無法自動還原，需要重新拍照上傳）');
+    }catch(err){
+      alert('匯入失敗：' + (err.message || '檔案格式錯誤'));
+    }
+    e.target.value = '';
+  };
+  reader.readAsText(file);
+}
+
+/* ========================= 初始化 ========================= */
+document.addEventListener('DOMContentLoaded', initAuth);
+window.addEventListener('resize', () => {
+  const activeBtn = document.querySelector('#tabNav .nav-btn.active');
+  if(activeBtn) moveTabIndicator(activeBtn.dataset.tab);
+});
+</script>
+</body>
+</html>
