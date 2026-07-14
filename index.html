@@ -343,8 +343,13 @@
                 </select>
               </div>
               <div>
-                <label class="field-label">超音波照片（選填，可直接拍照）</label>
-                <input id="msPhoto" type="file" accept="image/*" capture="environment" class="input-field" />
+                <label class="field-label">超音波照片（選填，可直接拍照，選好後能微調角度）</label>
+                <input id="msPhoto" type="file" accept="image/*" capture="environment" class="input-field" onchange="handlePhotoSelected(event)" />
+                <div id="msPhotoPreviewWrap" class="hidden mt-2 flex items-center gap-3">
+                  <img id="msPhotoPreviewThumb" class="w-14 h-14 object-cover rounded-lg border" style="border-color:var(--line)" alt="照片預覽" />
+                  <div class="flex-1 text-xs" style="color:var(--ink-soft)">已調整好角度 ✅</div>
+                  <button type="button" onclick="reopenPhotoEditor()" class="text-xs px-2.5 py-1 rounded-lg font-semibold" style="background:var(--cream-deep);color:var(--ink)">重新調整</button>
+                </div>
               </div>
               <button id="msSubmitBtn" type="submit" class="press-fx w-full py-3.5 rounded-2xl text-white font-bold" style="background:var(--clay)">＋ 新增里程碑</button>
             </form>
@@ -491,8 +496,8 @@
    ========================================================================= */
 
 /* !!!!!!!!!! 請把下面兩行換成你自己 Supabase 專案的值 !!!!!!!!!! */
-const SUPABASE_URL = 'https://krkiyxiunlgevylmumul.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_8Upde2VIEHJkB8lxy3GKmg_BwYTWSG3';
+const SUPABASE_URL = 'https://djfycozqxerjoksifzrx.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_ib5N4EGtUB86CSkvZKD-fw_u4aup0Lf';
 /* !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! */
 
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -851,9 +856,9 @@ function resizeImageToBlob(file, maxDim, quality){
   });
 }
 
-async function uploadPhoto(file){
+async function uploadPhoto(fileOrBlob){
   try{
-    const blob = await resizeImageToBlob(file, 1400, 0.75);
+    const blob = await resizeImageToBlob(fileOrBlob, 1400, 0.75);
     const path = `${currentUser.id}/${Date.now()}_${Math.random().toString(36).slice(2, 8)}.jpg`;
     const { error } = await sb.storage.from(PHOTO_BUCKET).upload(path, blob, { contentType: 'image/jpeg', upsert: false });
     if(error){ alert('照片上傳失敗：' + error.message); return null; }
@@ -864,6 +869,113 @@ async function uploadPhoto(file){
   }
 }
 
+/* ========================= 照片角度微調（拍歪的超音波照片可拉直再上傳） ========================= */
+let pendingPhotoBlob = null; // 使用者確認調整角度後的照片，真正上傳時會用這個
+const rotateEditState = { dataUrl: null, baseRotation: 0, fineRotation: 0, isReopen: false };
+
+function handlePhotoSelected(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => { openRotateEditor(ev.target.result, false); };
+  reader.onerror = () => alert('讀取照片失敗，請重新選擇');
+  reader.readAsDataURL(file);
+}
+
+function openRotateEditor(dataUrl, isReopen){
+  rotateEditState.dataUrl = dataUrl;
+  rotateEditState.isReopen = !!isReopen;
+  if(!isReopen){ rotateEditState.baseRotation = 0; rotateEditState.fineRotation = 0; }
+  const total = rotateEditState.baseRotation + rotateEditState.fineRotation;
+  openModal(`
+    <h3 class="font-display text-lg font-bold mb-3" style="color:var(--clay-deep)">📐 調整照片角度</h3>
+    <div class="flex items-center justify-center mb-4" style="background:var(--cream-deep); border-radius:1rem; overflow:hidden; height:240px;">
+      <img id="rotatePreviewImg" src="${dataUrl}" style="max-width:85%; max-height:85%; transform: rotate(${total}deg); transition: transform .1s ease;" alt="照片預覽" />
+    </div>
+    <div class="flex gap-2 mb-4">
+      <button type="button" onclick="adjustBaseRotation(-90)" class="press-fx flex-1 py-2 rounded-xl font-bold text-sm" style="background:var(--cream-deep)">⟲ 向左轉90°</button>
+      <button type="button" onclick="adjustBaseRotation(90)" class="press-fx flex-1 py-2 rounded-xl font-bold text-sm" style="background:var(--cream-deep)">⟳ 向右轉90°</button>
+    </div>
+    <label class="field-label">微調角度（拉正歪斜的照片）</label>
+    <input id="fineRotationSlider" type="range" min="-45" max="45" step="1" value="${rotateEditState.fineRotation}" class="w-full mb-1" oninput="adjustFineRotation(this.value)" style="accent-color:var(--clay)" />
+    <p id="fineRotationLabel" class="text-xs text-center mb-4" style="color:var(--ink-soft)">${rotateEditState.fineRotation}°</p>
+    <div class="flex gap-2">
+      <button type="button" onclick="cancelPhotoEdit()" class="press-fx flex-1 py-2.5 rounded-xl font-bold" style="background:var(--cream-deep);color:var(--ink)">取消</button>
+      <button type="button" id="photoEditConfirmBtn" onclick="confirmPhotoEdit()" class="press-fx flex-1 py-2.5 rounded-xl font-bold text-white" style="background:var(--clay)">確認使用</button>
+    </div>
+  `);
+}
+
+function adjustBaseRotation(delta){
+  rotateEditState.baseRotation = (rotateEditState.baseRotation + delta + 360) % 360;
+  updateRotatePreview();
+}
+function adjustFineRotation(val){
+  rotateEditState.fineRotation = Number(val);
+  const label = document.getElementById('fineRotationLabel');
+  if(label) label.textContent = val + '°';
+  updateRotatePreview();
+}
+function updateRotatePreview(){
+  const total = rotateEditState.baseRotation + rotateEditState.fineRotation;
+  const img = document.getElementById('rotatePreviewImg');
+  if(img) img.style.transform = `rotate(${total}deg)`;
+}
+
+function cancelPhotoEdit(){
+  if(!rotateEditState.isReopen){
+    document.getElementById('msPhoto').value = '';
+    pendingPhotoBlob = null;
+    document.getElementById('msPhotoPreviewWrap').classList.add('hidden');
+  }
+  closeModal();
+}
+
+function buildRotatedBlob(dataUrl, angleDeg){
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const rad = angleDeg * Math.PI / 180;
+      const sin = Math.abs(Math.sin(rad)), cos = Math.abs(Math.cos(rad));
+      const newW = Math.round(img.width * cos + img.height * sin);
+      const newH = Math.round(img.width * sin + img.height * cos);
+      const canvas = document.createElement('canvas');
+      canvas.width = newW; canvas.height = newH;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, newW, newH);
+      ctx.translate(newW / 2, newH / 2);
+      ctx.rotate(rad);
+      ctx.drawImage(img, -img.width / 2, -img.height / 2);
+      canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('轉檔失敗')), 'image/jpeg', 0.92);
+    };
+    img.onerror = () => reject(new Error('圖片讀取失敗'));
+    img.src = dataUrl;
+  });
+}
+
+async function confirmPhotoEdit(){
+  const btn = document.getElementById('photoEditConfirmBtn');
+  if(btn){ btn.disabled = true; btn.textContent = '處理中…'; }
+  try{
+    const total = rotateEditState.baseRotation + rotateEditState.fineRotation;
+    const blob = await buildRotatedBlob(rotateEditState.dataUrl, total);
+    pendingPhotoBlob = blob;
+    const url = URL.createObjectURL(blob);
+    document.getElementById('msPhotoPreviewThumb').src = url;
+    document.getElementById('msPhotoPreviewWrap').classList.remove('hidden');
+    closeModal();
+  }catch(err){
+    alert('照片處理失敗，請重新選擇照片');
+    closeModal();
+  }
+}
+
+function reopenPhotoEditor(){
+  if(!rotateEditState.dataUrl) return;
+  openRotateEditor(rotateEditState.dataUrl, true);
+}
+
 /* ========================= 時間軸／里程碑模組 ========================= */
 async function handleAddMilestone(e){
   e.preventDefault();
@@ -871,17 +983,15 @@ async function handleAddMilestone(e){
   const weekLabel = document.getElementById('msWeek').value.trim();
   const content = document.getElementById('msContent').value.trim();
   const target = document.getElementById('msTarget').value;
-  const fileInput = document.getElementById('msPhoto');
-  const file = fileInput.files[0];
 
   if(!date || !content || !target){ alert('請完整填寫日期、事件內容與適用對象'); return; }
 
   const btn = document.getElementById('msSubmitBtn');
-  btn.disabled = true; btn.textContent = file ? '上傳照片中…' : '新增中…';
+  btn.disabled = true; btn.textContent = pendingPhotoBlob ? '上傳照片中…' : '新增中…';
 
   let photoPath = null;
-  if(file){
-    photoPath = await uploadPhoto(file);
+  if(pendingPhotoBlob){
+    photoPath = await uploadPhoto(pendingPhotoBlob);
     if(photoPath === null){ btn.disabled = false; btn.textContent = '＋ 新增里程碑'; return; }
   }
 
@@ -896,6 +1006,12 @@ async function handleAddMilestone(e){
   await renderTimeline();
   document.getElementById('milestoneForm').reset();
   document.getElementById('msDate').value = formatDateObj(new Date());
+
+  pendingPhotoBlob = null;
+  rotateEditState.dataUrl = null;
+  rotateEditState.baseRotation = 0;
+  rotateEditState.fineRotation = 0;
+  document.getElementById('msPhotoPreviewWrap').classList.add('hidden');
 }
 
 async function deleteTimelineItem(id){
