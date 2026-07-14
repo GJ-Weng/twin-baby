@@ -38,6 +38,11 @@
     font-family: 'Noto Sans TC', -apple-system, BlinkMacSystemFont, sans-serif;
     -webkit-tap-highlight-color: transparent;
   }
+  /* 預留 iPhone 瀏海／狀態列與底部手勢列的安全區域，避免內容捲動時被系統列蓋住或重疊 */
+  body{
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
   body{
     background-image: radial-gradient(circle at 1px 1px, rgba(173,122,78,0.06) 1px, transparent 0);
     background-size: 22px 22px;
@@ -69,7 +74,7 @@
   #sidebarNav .nav-btn:hover:not(.active){ background:rgba(173,122,78,0.06); }
 
   .field-label{ font-size:.78rem; color:var(--ink-soft); font-weight:700; margin-bottom:.32rem; display:block; letter-spacing:.02em; }
-  .input-field{ width:100%; background:#fff; border:1.5px solid var(--line); border-radius:.9rem; padding:.66rem .9rem; font-size:.95rem; color:var(--ink); outline:none; transition: border-color .15s ease, box-shadow .15s ease; }
+  .input-field{ width:100%; min-width:0; box-sizing:border-box; background:#fff; border:1.5px solid var(--line); border-radius:.9rem; padding:.66rem .7rem; font-size:.92rem; color:var(--ink); outline:none; transition: border-color .15s ease, box-shadow .15s ease; }
   .input-field:focus{ border-color: var(--clay); box-shadow: 0 0 0 4px rgba(173,122,78,0.14); }
   button:focus-visible, .press-fx:focus-visible, a:focus-visible{ outline: 3px solid var(--gold); outline-offset: 2px; }
 
@@ -280,7 +285,7 @@
                 <input id="expNote" type="text" required placeholder="例如：自費羊膜穿刺" class="input-field" />
               </div>
               <div class="grid grid-cols-2 gap-3">
-                <div>
+                <div class="min-w-0">
                   <label class="field-label">適用對象</label>
                   <select id="expTarget" required class="input-field">
                     <option value="" disabled selected>請選擇</option>
@@ -289,7 +294,7 @@
                     <option value="babyB">二寶 (Baby B)</option>
                   </select>
                 </div>
-                <div>
+                <div class="min-w-0">
                   <label class="field-label">花費分類</label>
                   <select id="expCategory" required class="input-field">
                     <option value="" disabled selected>請選擇</option>
@@ -320,11 +325,11 @@
             <div class="eyebrow"><span>✏️</span>新增里程碑</div>
             <form id="milestoneForm" class="space-y-3" onsubmit="handleAddMilestone(event)">
               <div class="grid grid-cols-2 gap-3">
-                <div>
+                <div class="min-w-0">
                   <label class="field-label">日期</label>
                   <input id="msDate" type="date" required class="input-field" />
                 </div>
-                <div>
+                <div class="min-w-0">
                   <label class="field-label">週數／天數</label>
                   <input id="msWeek" type="text" placeholder="例如：第24週 / 產後第3天" class="input-field" />
                 </div>
@@ -442,11 +447,11 @@
                 <input id="bnCondition" type="text" placeholder="例如：婆婆贈送，已致謝／需設籍滿一年" class="input-field" />
               </div>
               <div class="grid grid-cols-2 gap-3">
-                <div>
+                <div class="min-w-0">
                   <label class="field-label">期限（選填）</label>
                   <input id="bnDeadline" type="date" class="input-field" />
                 </div>
-                <div>
+                <div class="min-w-0">
                   <label class="field-label">適用對象</label>
                   <select id="bnTarget" required class="input-field">
                     <option value="pregnancy" selected>孕期/共通</option>
