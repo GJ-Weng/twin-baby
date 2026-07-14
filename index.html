@@ -284,7 +284,7 @@
                 <label class="field-label">品項／備註</label>
                 <input id="expNote" type="text" required placeholder="例如：自費羊膜穿刺" class="input-field" />
               </div>
-              <div class="grid grid-cols-2 gap-3">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div class="min-w-0">
                   <label class="field-label">適用對象</label>
                   <select id="expTarget" required class="input-field">
@@ -324,7 +324,7 @@
           <div class="card p-5">
             <div class="eyebrow"><span>✏️</span>新增里程碑</div>
             <form id="milestoneForm" class="space-y-3" onsubmit="handleAddMilestone(event)">
-              <div class="grid grid-cols-2 gap-3">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div class="min-w-0">
                   <label class="field-label">日期</label>
                   <input id="msDate" type="date" required class="input-field" />
@@ -443,7 +443,7 @@
                 <label class="field-label">備註（贈送人／申請條件等）</label>
                 <input id="bnCondition" type="text" placeholder="例如：婆婆贈送，已致謝／需設籍滿一年" class="input-field" />
               </div>
-              <div class="grid grid-cols-2 gap-3">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div class="min-w-0">
                   <label class="field-label">期限（選填）</label>
                   <input id="bnDeadline" type="date" class="input-field" />
@@ -875,10 +875,10 @@ async function uploadPhoto(fileOrBlob){
   }
 }
 
-/* ========================= 照片角度微調（支援一次選多張／分次拍照，逐張調整角度後排隊上傳） ========================= */
-let pendingPhotos = [];       // 已確認調整好的照片：{ id, originalDataUrl, blob, url, baseRotation, fineRotation }
+/* ========================= 照片調整（旋轉／傾斜校正／放大裁切，支援排隊多張處理） ========================= */
+let pendingPhotos = [];       // 已確認調整好的照片：{ id, originalDataUrl, blob, url, baseRotation, fineRotation, shearX, shearY, zoom }
 let photoEditQueue = [];      // 剛選取、尚未經過調整的照片 dataURL 佇列
-const currentEdit = { mode: 'new', originalDataUrl: null, targetId: null, baseRotation: 0, fineRotation: 0 };
+const currentEdit = { mode: 'new', originalDataUrl: null, targetId: null, baseRotation: 0, fineRotation: 0, shearX: 0, shearY: 0, zoom: 1, imgW: 4, imgH: 3 };
 
 function readFileAsDataURL(file){
   return new Promise((resolve, reject) => {
@@ -886,6 +886,15 @@ function readFileAsDataURL(file){
     reader.onload = (ev) => resolve(ev.target.result);
     reader.onerror = () => reject(new Error('讀取照片失敗'));
     reader.readAsDataURL(file);
+  });
+}
+
+function getImageDims(dataUrl){
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => resolve({ w: img.naturalWidth || 4, h: img.naturalHeight || 3 });
+    img.onerror = () => resolve({ w: 4, h: 3 });
+    img.src = dataUrl;
   });
 }
 
@@ -903,53 +912,98 @@ function handlePhotoSelected(e){
 function processNextInQueue(){
   if(photoEditQueue.length === 0) return;
   const next = photoEditQueue.shift();
-  openRotateEditor(next, 'new', null, 0, 0);
+  openRotateEditor(next, 'new', null, { baseRotation: 0, fineRotation: 0, shearX: 0, shearY: 0, zoom: 1 });
 }
 
-function openRotateEditor(dataUrl, mode, targetId, initialBase, initialFine){
+async function openRotateEditor(dataUrl, mode, targetId, initial){
   currentEdit.mode = mode;
   currentEdit.originalDataUrl = dataUrl;
   currentEdit.targetId = targetId || null;
-  currentEdit.baseRotation = initialBase || 0;
-  currentEdit.fineRotation = initialFine || 0;
-  const total = currentEdit.baseRotation + currentEdit.fineRotation;
+  currentEdit.baseRotation = initial.baseRotation || 0;
+  currentEdit.fineRotation = initial.fineRotation || 0;
+  currentEdit.shearX = initial.shearX || 0;
+  currentEdit.shearY = initial.shearY || 0;
+  currentEdit.zoom = initial.zoom || 1;
+
+  const dims = await getImageDims(dataUrl);
+  currentEdit.imgW = dims.w;
+  currentEdit.imgH = dims.h;
+
+  renderRotateEditorModal();
+}
+
+function renderRotateEditorModal(){
   const remaining = photoEditQueue.length;
-  const hasMore = mode === 'new' && remaining > 0;
+  const hasMore = currentEdit.mode === 'new' && remaining > 0;
   const confirmLabel = hasMore ? `確認並繼續（還有${remaining}張）` : '確認使用';
   const cancelLabel = hasMore ? '跳過這張' : '取消';
+
+  // 預覽框比例：依照目前是 90°/270° 的倍數決定長寬互換（讓預覽大致對應最終輸出比例）
+  const baseIsSideways = (((currentEdit.baseRotation % 180) + 180) % 180) === 90;
+  const frameW = baseIsSideways ? currentEdit.imgH : currentEdit.imgW;
+  const frameH = baseIsSideways ? currentEdit.imgW : currentEdit.imgH;
+  const previewH = 220;
+  const previewW = Math.max(140, Math.min(320, previewH * (frameW / frameH)));
+  const previewScale = previewH / frameH;
+  const dispW = Math.round(currentEdit.imgW * previewScale);
+  const dispH = Math.round(currentEdit.imgH * previewScale);
+
   openModal(`
-    <h3 class="font-display text-lg font-bold mb-3" style="color:var(--clay-deep)">📐 調整照片角度${mode === 'new' && remaining > 0 ? `（還有 ${remaining} 張待處理）` : ''}</h3>
-    <div class="flex items-center justify-center mb-4" style="background:var(--cream-deep); border-radius:1rem; overflow:hidden; height:240px;">
-      <img id="rotatePreviewImg" src="${dataUrl}" style="max-width:85%; max-height:85%; transform: rotate(${total}deg); transition: transform .1s ease;" alt="照片預覽" />
+    <h3 class="font-display text-lg font-bold mb-3" style="color:var(--clay-deep)">📐 調整照片${hasMore ? `（還有 ${remaining} 張待處理）` : ''}</h3>
+    <div class="flex justify-center mb-4">
+      <div style="width:${previewW}px;height:${previewH}px;background:var(--cream-deep);border-radius:1rem;overflow:hidden;position:relative;">
+        <img id="rotatePreviewImg" src="${currentEdit.originalDataUrl}" style="position:absolute; top:50%; left:50%; width:${dispW}px; height:${dispH}px; max-width:none;" alt="照片預覽" />
+      </div>
     </div>
-    <div class="flex gap-2 mb-4">
+
+    <div class="flex gap-2 mb-3">
       <button type="button" onclick="adjustBaseRotation(-90)" class="press-fx flex-1 py-2 rounded-xl font-bold text-sm" style="background:var(--cream-deep)">⟲ 向左轉90°</button>
       <button type="button" onclick="adjustBaseRotation(90)" class="press-fx flex-1 py-2 rounded-xl font-bold text-sm" style="background:var(--cream-deep)">⟳ 向右轉90°</button>
     </div>
-    <label class="field-label">微調角度（拉正歪斜的照片）</label>
-    <input id="fineRotationSlider" type="range" min="-45" max="45" step="1" value="${currentEdit.fineRotation}" class="w-full mb-1" oninput="adjustFineRotation(this.value)" style="accent-color:var(--clay)" />
-    <p id="fineRotationLabel" class="text-xs text-center mb-4" style="color:var(--ink-soft)">${currentEdit.fineRotation}°</p>
+
+    <label class="field-label">微調角度</label>
+    <input type="range" min="-45" max="45" step="1" value="${currentEdit.fineRotation}" class="w-full mb-1" oninput="adjustEditValue('fineRotation', this.value, this)" style="accent-color:var(--clay)" />
+    <p id="fineRotationLabel" class="text-xs text-center mb-3" style="color:var(--ink-soft)">${currentEdit.fineRotation}°</p>
+
+    <label class="field-label">水平傾斜（校正平面歪斜）</label>
+    <input type="range" min="-25" max="25" step="1" value="${currentEdit.shearX}" class="w-full mb-1" oninput="adjustEditValue('shearX', this.value, this)" style="accent-color:var(--clay)" />
+    <p id="shearXLabel" class="text-xs text-center mb-3" style="color:var(--ink-soft)">${currentEdit.shearX}°</p>
+
+    <label class="field-label">垂直傾斜（校正平面歪斜）</label>
+    <input type="range" min="-25" max="25" step="1" value="${currentEdit.shearY}" class="w-full mb-1" oninput="adjustEditValue('shearY', this.value, this)" style="accent-color:var(--clay)" />
+    <p id="shearYLabel" class="text-xs text-center mb-3" style="color:var(--ink-soft)">${currentEdit.shearY}°</p>
+
+    <label class="field-label">放大裁切（去除多餘的邊框背景）</label>
+    <input type="range" min="100" max="250" step="5" value="${Math.round(currentEdit.zoom * 100)}" class="w-full mb-1" oninput="adjustEditValue('zoom', this.value / 100, this)" style="accent-color:var(--clay)" />
+    <p id="zoomLabel" class="text-xs text-center mb-4" style="color:var(--ink-soft)">${Math.round(currentEdit.zoom * 100)}%</p>
+
     <div class="flex gap-2">
       <button type="button" onclick="cancelPhotoEdit()" class="press-fx flex-1 py-2.5 rounded-xl font-bold" style="background:var(--cream-deep);color:var(--ink)">${cancelLabel}</button>
       <button type="button" id="photoEditConfirmBtn" onclick="confirmPhotoEdit()" class="press-fx flex-1 py-2.5 rounded-xl font-bold text-white" style="background:var(--clay)">${confirmLabel}</button>
     </div>
   `);
+  updateRotatePreview();
 }
 
 function adjustBaseRotation(delta){
   currentEdit.baseRotation = (currentEdit.baseRotation + delta + 360) % 360;
+  renderRotateEditorModal(); // 90°切換會改變畫框比例，整個彈窗重新渲染一次
+}
+
+const EDIT_VALUE_LABELS = { fineRotation: 'fineRotationLabel', shearX: 'shearXLabel', shearY: 'shearYLabel', zoom: 'zoomLabel' };
+function adjustEditValue(key, val, inputEl){
+  currentEdit[key] = Number(val);
+  const labelEl = document.getElementById(EDIT_VALUE_LABELS[key]);
+  if(labelEl) labelEl.textContent = key === 'zoom' ? `${Math.round(currentEdit.zoom * 100)}%` : `${currentEdit[key]}°`;
   updateRotatePreview();
 }
-function adjustFineRotation(val){
-  currentEdit.fineRotation = Number(val);
-  const label = document.getElementById('fineRotationLabel');
-  if(label) label.textContent = val + '°';
-  updateRotatePreview();
-}
+
 function updateRotatePreview(){
-  const total = currentEdit.baseRotation + currentEdit.fineRotation;
   const img = document.getElementById('rotatePreviewImg');
-  if(img) img.style.transform = `rotate(${total}deg)`;
+  if(!img) return;
+  const total = currentEdit.baseRotation + currentEdit.fineRotation;
+  // 順序需與最終輸出的 canvas 運算一致：先置中、再縮放、再傾斜、最後旋轉
+  img.style.transform = `rotate(${total}deg) skew(${currentEdit.shearX}deg, ${currentEdit.shearY}deg) scale(${currentEdit.zoom}) translate(-50%, -50%)`;
 }
 
 function cancelPhotoEdit(){
@@ -957,12 +1011,17 @@ function cancelPhotoEdit(){
   if(currentEdit.mode === 'new'){ processNextInQueue(); } // 跳過這張，繼續處理佇列裡的下一張；若是「重新調整」則保留原本已確認的版本不變
 }
 
-function buildRotatedBlob(dataUrl, angleDeg){
+function buildTransformedBlob(dataUrl, opts){
+  const rotation = opts.rotation || 0;
+  const shearX = opts.shearX || 0;
+  const shearY = opts.shearY || 0;
+  const zoom = opts.zoom || 1;
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.onload = () => {
-      const rad = angleDeg * Math.PI / 180;
+      const rad = rotation * Math.PI / 180;
       const sin = Math.abs(Math.sin(rad)), cos = Math.abs(Math.cos(rad));
+      // 畫布大小只依「旋轉」決定，傾斜與縮放造成超出畫布的部分會被自然裁掉（就是放大裁切的效果）
       const newW = Math.round(img.width * cos + img.height * sin);
       const newH = Math.round(img.width * sin + img.height * cos);
       const canvas = document.createElement('canvas');
@@ -972,6 +1031,8 @@ function buildRotatedBlob(dataUrl, angleDeg){
       ctx.fillRect(0, 0, newW, newH);
       ctx.translate(newW / 2, newH / 2);
       ctx.rotate(rad);
+      ctx.transform(1, Math.tan(shearY * Math.PI / 180), Math.tan(shearX * Math.PI / 180), 1, 0, 0);
+      ctx.scale(zoom, zoom);
       ctx.drawImage(img, -img.width / 2, -img.height / 2);
       canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('轉檔失敗')), 'image/jpeg', 0.92);
     };
@@ -985,15 +1046,16 @@ async function confirmPhotoEdit(){
   if(btn){ btn.disabled = true; btn.textContent = '處理中…'; }
   try{
     const total = currentEdit.baseRotation + currentEdit.fineRotation;
-    const blob = await buildRotatedBlob(currentEdit.originalDataUrl, total);
+    const blob = await buildTransformedBlob(currentEdit.originalDataUrl, { rotation: total, shearX: currentEdit.shearX, shearY: currentEdit.shearY, zoom: currentEdit.zoom });
     const url = URL.createObjectURL(blob);
+    const snapshot = { baseRotation: currentEdit.baseRotation, fineRotation: currentEdit.fineRotation, shearX: currentEdit.shearX, shearY: currentEdit.shearY, zoom: currentEdit.zoom };
     if(currentEdit.mode === 'new'){
-      pendingPhotos.push({ id: genId(), originalDataUrl: currentEdit.originalDataUrl, blob, url, baseRotation: currentEdit.baseRotation, fineRotation: currentEdit.fineRotation });
+      pendingPhotos.push({ id: genId(), originalDataUrl: currentEdit.originalDataUrl, blob, url, ...snapshot });
     } else {
       const item = pendingPhotos.find(p => p.id === currentEdit.targetId);
       if(item){
         if(item.url) URL.revokeObjectURL(item.url);
-        item.blob = blob; item.url = url; item.baseRotation = currentEdit.baseRotation; item.fineRotation = currentEdit.fineRotation;
+        Object.assign(item, { blob, url, ...snapshot });
       }
     }
     renderPhotoGallery();
@@ -1009,7 +1071,7 @@ async function confirmPhotoEdit(){
 function reopenGalleryPhoto(id){
   const item = pendingPhotos.find(p => p.id === id);
   if(!item) return;
-  openRotateEditor(item.originalDataUrl, 'reopen', id, item.baseRotation, item.fineRotation);
+  openRotateEditor(item.originalDataUrl, 'reopen', id, { baseRotation: item.baseRotation, fineRotation: item.fineRotation, shearX: item.shearX, shearY: item.shearY, zoom: item.zoom });
 }
 
 function removeGalleryPhoto(id){
