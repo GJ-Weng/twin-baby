@@ -416,11 +416,11 @@
       <section id="tab-benefits" class="hidden">
         <div class="grid gap-6 md:grid-cols-[360px_1fr] md:items-start">
           <div class="card p-5">
-            <div class="eyebrow"><span>✏️</span>新增媽媽禮／補助</div>
+            <div class="eyebrow"><span>✏️</span>新增媽媽禮／補助／贈禮</div>
             <form id="benefitForm" class="space-y-3" onsubmit="handleAddBenefit(event)">
               <div>
                 <label class="field-label">名稱</label>
-                <input id="bnName" type="text" required placeholder="例如：中央生育給付" class="input-field" />
+                <input id="bnName" type="text" required placeholder="例如：中央生育給付／王阿姨包的紅包" class="input-field" />
               </div>
               <div>
                 <label class="field-label">類型</label>
@@ -429,20 +429,21 @@
                   <option value="地方政府">地方政府</option>
                   <option value="社會保險">社會保險（勞保/國保/農保）</option>
                   <option value="職場給付">職場給付（育嬰留停）</option>
+                  <option value="親友贈與">親友贈與（金錢／物資）</option>
                   <option value="其他（醫院/廠商）">其他（醫院/廠商）</option>
                 </select>
               </div>
               <div>
                 <label class="field-label">金額／內容</label>
-                <input id="bnAmount" type="text" placeholder="例如：雙胞胎 20 萬元" class="input-field" />
+                <input id="bnAmount" type="text" placeholder="例如：現金 2,000 元／嬰兒推車一台" class="input-field" />
               </div>
               <div>
-                <label class="field-label">申請條件</label>
-                <input id="bnCondition" type="text" placeholder="例如：需設籍滿一年" class="input-field" />
+                <label class="field-label">備註（贈送人／申請條件等）</label>
+                <input id="bnCondition" type="text" placeholder="例如：婆婆贈送，已致謝／需設籍滿一年" class="input-field" />
               </div>
               <div class="grid grid-cols-2 gap-3">
                 <div>
-                  <label class="field-label">申請期限（選填）</label>
+                  <label class="field-label">期限（選填）</label>
                   <input id="bnDeadline" type="date" class="input-field" />
                 </div>
                 <div>
@@ -459,8 +460,8 @@
           </div>
 
           <div class="card p-5">
-            <div class="eyebrow"><span>🎁</span>媽媽禮與生育福利<span id="benefitCount" class="count-badge"></span></div>
-            <p class="text-[11px] mb-3 leading-relaxed" style="color:var(--ink-soft)">已預先建立台灣 2026 年常見生育相關補助項目（實際金額與資格請以各單位最新公告為準）。</p>
+            <div class="eyebrow"><span>🎁</span>媽媽禮・補助・親友贈禮<span id="benefitCount" class="count-badge"></span></div>
+            <p class="text-[11px] mb-3 leading-relaxed" style="color:var(--ink-soft)">已預先建立台灣 2026 年常見生育相關補助項目（實際金額與資格請以各單位最新公告為準），親友包的紅包或送的物資也可以記在這裡。</p>
             <div id="benefitList" class="space-y-2.5"></div>
           </div>
         </div>
