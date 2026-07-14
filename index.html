@@ -348,13 +348,10 @@
                 </select>
               </div>
               <div>
-                <label class="field-label">超音波照片（選填，可直接拍照，選好後能微調角度）</label>
-                <input id="msPhoto" type="file" accept="image/*" capture="environment" class="input-field" onchange="handlePhotoSelected(event)" />
-                <div id="msPhotoPreviewWrap" class="hidden mt-2 flex items-center gap-3">
-                  <img id="msPhotoPreviewThumb" class="w-14 h-14 object-cover rounded-lg border" style="border-color:var(--line)" alt="照片預覽" />
-                  <div class="flex-1 text-xs" style="color:var(--ink-soft)">已調整好角度 ✅</div>
-                  <button type="button" onclick="reopenPhotoEditor()" class="text-xs px-2.5 py-1 rounded-lg font-semibold" style="background:var(--cream-deep);color:var(--ink)">重新調整</button>
-                </div>
+                <label class="field-label">超音波照片（選填，可一次選多張或分次拍照，選好後能微調角度）</label>
+                <input id="msPhoto" type="file" accept="image/*" multiple class="input-field" onchange="handlePhotoSelected(event)" />
+                <div id="msPhotoGallery" class="hidden mt-2 grid grid-cols-4 gap-2"></div>
+                <p id="msPhotoHint" class="hidden text-[11px] mt-1" style="color:var(--ink-soft)">點縮圖可重新調整角度，點右上角 × 可移除</p>
               </div>
               <button id="msSubmitBtn" type="submit" class="press-fx w-full py-3.5 rounded-2xl text-white font-bold" style="background:var(--clay)">＋ 新增里程碑</button>
             </form>
@@ -579,7 +576,10 @@ function formatTimeObj(d){ return `${pad2(d.getHours())}:${pad2(d.getMinutes())}
 function getCategoryInfo(value){ return CATEGORIES.find(c => c.value === value) || { label:'未分類', color:'#B0A99A' }; }
 function getTargetInfo(value){ return TARGETS.find(t => t.value === value) || { label:'未指定', hex:'#B0A99A' }; }
 function money(n){ return '$' + Number(n || 0).toLocaleString('zh-Hant-TW'); }
-function mapTimelineRow(r){ return { id:r.id, date:r.date, time:r.time||'', weekLabel:r.week_label||'', content:r.content, target:r.target, type:r.type, photoPath:r.photo_path||null }; }
+function mapTimelineRow(r){
+  const paths = (Array.isArray(r.photo_paths) && r.photo_paths.length) ? r.photo_paths : (r.photo_path ? [r.photo_path] : []);
+  return { id:r.id, date:r.date, time:r.time||'', weekLabel:r.week_label||'', content:r.content, target:r.target, type:r.type, photoPaths: paths };
+}
 function mapExpenseRow(r){ return { id:r.id, amount:Number(r.amount), date:r.date, note:r.note, target:r.target, category:r.category }; }
 function mapChecklistRow(r){ return { id:r.id, category:r.category, itemName:r.item_name, target:r.target, status:r.status }; }
 function mapBenefitRow(r){ return { id:r.id, name:r.name, type:r.type, amount:r.amount||'', condition:r.condition_text||'', deadline:r.deadline||null, target:r.target, status:r.status }; }
@@ -875,26 +875,50 @@ async function uploadPhoto(fileOrBlob){
   }
 }
 
-/* ========================= 照片角度微調（拍歪的超音波照片可拉直再上傳） ========================= */
-let pendingPhotoBlob = null; // 使用者確認調整角度後的照片，真正上傳時會用這個
-const rotateEditState = { dataUrl: null, baseRotation: 0, fineRotation: 0, isReopen: false };
+/* ========================= 照片角度微調（支援一次選多張／分次拍照，逐張調整角度後排隊上傳） ========================= */
+let pendingPhotos = [];       // 已確認調整好的照片：{ id, originalDataUrl, blob, url, baseRotation, fineRotation }
+let photoEditQueue = [];      // 剛選取、尚未經過調整的照片 dataURL 佇列
+const currentEdit = { mode: 'new', originalDataUrl: null, targetId: null, baseRotation: 0, fineRotation: 0 };
 
-function handlePhotoSelected(e){
-  const file = e.target.files[0];
-  if(!file) return;
-  const reader = new FileReader();
-  reader.onload = (ev) => { openRotateEditor(ev.target.result, false); };
-  reader.onerror = () => alert('讀取照片失敗，請重新選擇');
-  reader.readAsDataURL(file);
+function readFileAsDataURL(file){
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (ev) => resolve(ev.target.result);
+    reader.onerror = () => reject(new Error('讀取照片失敗'));
+    reader.readAsDataURL(file);
+  });
 }
 
-function openRotateEditor(dataUrl, isReopen){
-  rotateEditState.dataUrl = dataUrl;
-  rotateEditState.isReopen = !!isReopen;
-  if(!isReopen){ rotateEditState.baseRotation = 0; rotateEditState.fineRotation = 0; }
-  const total = rotateEditState.baseRotation + rotateEditState.fineRotation;
+function handlePhotoSelected(e){
+  const files = Array.from(e.target.files || []);
+  e.target.value = ''; // 立刻清空，讓使用者可以再次點擊繼續拍下一張
+  if(files.length === 0) return;
+  Promise.all(files.map(readFileAsDataURL)).then(dataUrls => {
+    const wasEmpty = photoEditQueue.length === 0;
+    photoEditQueue.push(...dataUrls);
+    if(wasEmpty) processNextInQueue();
+  }).catch(() => alert('讀取照片失敗，請重新選擇'));
+}
+
+function processNextInQueue(){
+  if(photoEditQueue.length === 0) return;
+  const next = photoEditQueue.shift();
+  openRotateEditor(next, 'new', null, 0, 0);
+}
+
+function openRotateEditor(dataUrl, mode, targetId, initialBase, initialFine){
+  currentEdit.mode = mode;
+  currentEdit.originalDataUrl = dataUrl;
+  currentEdit.targetId = targetId || null;
+  currentEdit.baseRotation = initialBase || 0;
+  currentEdit.fineRotation = initialFine || 0;
+  const total = currentEdit.baseRotation + currentEdit.fineRotation;
+  const remaining = photoEditQueue.length;
+  const hasMore = mode === 'new' && remaining > 0;
+  const confirmLabel = hasMore ? `確認並繼續（還有${remaining}張）` : '確認使用';
+  const cancelLabel = hasMore ? '跳過這張' : '取消';
   openModal(`
-    <h3 class="font-display text-lg font-bold mb-3" style="color:var(--clay-deep)">📐 調整照片角度</h3>
+    <h3 class="font-display text-lg font-bold mb-3" style="color:var(--clay-deep)">📐 調整照片角度${mode === 'new' && remaining > 0 ? `（還有 ${remaining} 張待處理）` : ''}</h3>
     <div class="flex items-center justify-center mb-4" style="background:var(--cream-deep); border-radius:1rem; overflow:hidden; height:240px;">
       <img id="rotatePreviewImg" src="${dataUrl}" style="max-width:85%; max-height:85%; transform: rotate(${total}deg); transition: transform .1s ease;" alt="照片預覽" />
     </div>
@@ -903,38 +927,34 @@ function openRotateEditor(dataUrl, isReopen){
       <button type="button" onclick="adjustBaseRotation(90)" class="press-fx flex-1 py-2 rounded-xl font-bold text-sm" style="background:var(--cream-deep)">⟳ 向右轉90°</button>
     </div>
     <label class="field-label">微調角度（拉正歪斜的照片）</label>
-    <input id="fineRotationSlider" type="range" min="-45" max="45" step="1" value="${rotateEditState.fineRotation}" class="w-full mb-1" oninput="adjustFineRotation(this.value)" style="accent-color:var(--clay)" />
-    <p id="fineRotationLabel" class="text-xs text-center mb-4" style="color:var(--ink-soft)">${rotateEditState.fineRotation}°</p>
+    <input id="fineRotationSlider" type="range" min="-45" max="45" step="1" value="${currentEdit.fineRotation}" class="w-full mb-1" oninput="adjustFineRotation(this.value)" style="accent-color:var(--clay)" />
+    <p id="fineRotationLabel" class="text-xs text-center mb-4" style="color:var(--ink-soft)">${currentEdit.fineRotation}°</p>
     <div class="flex gap-2">
-      <button type="button" onclick="cancelPhotoEdit()" class="press-fx flex-1 py-2.5 rounded-xl font-bold" style="background:var(--cream-deep);color:var(--ink)">取消</button>
-      <button type="button" id="photoEditConfirmBtn" onclick="confirmPhotoEdit()" class="press-fx flex-1 py-2.5 rounded-xl font-bold text-white" style="background:var(--clay)">確認使用</button>
+      <button type="button" onclick="cancelPhotoEdit()" class="press-fx flex-1 py-2.5 rounded-xl font-bold" style="background:var(--cream-deep);color:var(--ink)">${cancelLabel}</button>
+      <button type="button" id="photoEditConfirmBtn" onclick="confirmPhotoEdit()" class="press-fx flex-1 py-2.5 rounded-xl font-bold text-white" style="background:var(--clay)">${confirmLabel}</button>
     </div>
   `);
 }
 
 function adjustBaseRotation(delta){
-  rotateEditState.baseRotation = (rotateEditState.baseRotation + delta + 360) % 360;
+  currentEdit.baseRotation = (currentEdit.baseRotation + delta + 360) % 360;
   updateRotatePreview();
 }
 function adjustFineRotation(val){
-  rotateEditState.fineRotation = Number(val);
+  currentEdit.fineRotation = Number(val);
   const label = document.getElementById('fineRotationLabel');
   if(label) label.textContent = val + '°';
   updateRotatePreview();
 }
 function updateRotatePreview(){
-  const total = rotateEditState.baseRotation + rotateEditState.fineRotation;
+  const total = currentEdit.baseRotation + currentEdit.fineRotation;
   const img = document.getElementById('rotatePreviewImg');
   if(img) img.style.transform = `rotate(${total}deg)`;
 }
 
 function cancelPhotoEdit(){
-  if(!rotateEditState.isReopen){
-    document.getElementById('msPhoto').value = '';
-    pendingPhotoBlob = null;
-    document.getElementById('msPhotoPreviewWrap').classList.add('hidden');
-  }
   closeModal();
+  if(currentEdit.mode === 'new'){ processNextInQueue(); } // 跳過這張，繼續處理佇列裡的下一張；若是「重新調整」則保留原本已確認的版本不變
 }
 
 function buildRotatedBlob(dataUrl, angleDeg){
@@ -964,22 +984,66 @@ async function confirmPhotoEdit(){
   const btn = document.getElementById('photoEditConfirmBtn');
   if(btn){ btn.disabled = true; btn.textContent = '處理中…'; }
   try{
-    const total = rotateEditState.baseRotation + rotateEditState.fineRotation;
-    const blob = await buildRotatedBlob(rotateEditState.dataUrl, total);
-    pendingPhotoBlob = blob;
+    const total = currentEdit.baseRotation + currentEdit.fineRotation;
+    const blob = await buildRotatedBlob(currentEdit.originalDataUrl, total);
     const url = URL.createObjectURL(blob);
-    document.getElementById('msPhotoPreviewThumb').src = url;
-    document.getElementById('msPhotoPreviewWrap').classList.remove('hidden');
+    if(currentEdit.mode === 'new'){
+      pendingPhotos.push({ id: genId(), originalDataUrl: currentEdit.originalDataUrl, blob, url, baseRotation: currentEdit.baseRotation, fineRotation: currentEdit.fineRotation });
+    } else {
+      const item = pendingPhotos.find(p => p.id === currentEdit.targetId);
+      if(item){
+        if(item.url) URL.revokeObjectURL(item.url);
+        item.blob = blob; item.url = url; item.baseRotation = currentEdit.baseRotation; item.fineRotation = currentEdit.fineRotation;
+      }
+    }
+    renderPhotoGallery();
     closeModal();
+    if(currentEdit.mode === 'new'){ processNextInQueue(); }
   }catch(err){
     alert('照片處理失敗，請重新選擇照片');
     closeModal();
+    if(currentEdit.mode === 'new'){ processNextInQueue(); }
   }
 }
 
-function reopenPhotoEditor(){
-  if(!rotateEditState.dataUrl) return;
-  openRotateEditor(rotateEditState.dataUrl, true);
+function reopenGalleryPhoto(id){
+  const item = pendingPhotos.find(p => p.id === id);
+  if(!item) return;
+  openRotateEditor(item.originalDataUrl, 'reopen', id, item.baseRotation, item.fineRotation);
+}
+
+function removeGalleryPhoto(id){
+  const item = pendingPhotos.find(p => p.id === id);
+  if(item && item.url) URL.revokeObjectURL(item.url);
+  pendingPhotos = pendingPhotos.filter(p => p.id !== id);
+  renderPhotoGallery();
+}
+
+function renderPhotoGallery(){
+  const wrap = document.getElementById('msPhotoGallery');
+  const hint = document.getElementById('msPhotoHint');
+  if(!wrap) return;
+  if(pendingPhotos.length === 0){
+    wrap.classList.add('hidden');
+    wrap.innerHTML = '';
+    if(hint) hint.classList.add('hidden');
+    return;
+  }
+  wrap.classList.remove('hidden');
+  if(hint) hint.classList.remove('hidden');
+  wrap.innerHTML = pendingPhotos.map(p => `
+    <div class="relative">
+      <img src="${p.url}" class="w-full h-16 object-cover rounded-lg border cursor-pointer" style="border-color:var(--line)" onclick="reopenGalleryPhoto('${p.id}')" alt="待上傳照片" />
+      <button type="button" onclick="removeGalleryPhoto('${p.id}')" class="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full text-white text-xs font-bold flex items-center justify-center leading-none" style="background:#B5453D">×</button>
+    </div>
+  `).join('');
+}
+
+function resetPendingPhotos(){
+  pendingPhotos.forEach(p => { if(p.url) URL.revokeObjectURL(p.url); });
+  pendingPhotos = [];
+  photoEditQueue = [];
+  renderPhotoGallery();
 }
 
 /* ========================= 時間軸／里程碑模組 ========================= */
@@ -993,16 +1057,19 @@ async function handleAddMilestone(e){
   if(!date || !content || !target){ alert('請完整填寫日期、事件內容與適用對象'); return; }
 
   const btn = document.getElementById('msSubmitBtn');
-  btn.disabled = true; btn.textContent = pendingPhotoBlob ? '上傳照片中…' : '新增中…';
+  const photoCount = pendingPhotos.length;
+  btn.disabled = true; btn.textContent = photoCount ? `上傳照片中（0/${photoCount}）…` : '新增中…';
 
-  let photoPath = null;
-  if(pendingPhotoBlob){
-    photoPath = await uploadPhoto(pendingPhotoBlob);
-    if(photoPath === null){ btn.disabled = false; btn.textContent = '＋ 新增里程碑'; return; }
+  const photoPaths = [];
+  for(let i = 0; i < pendingPhotos.length; i++){
+    const path = await uploadPhoto(pendingPhotos[i].blob);
+    if(path === null){ btn.disabled = false; btn.textContent = '＋ 新增里程碑'; return; } // uploadPhoto 內已 alert 錯誤訊息
+    photoPaths.push(path);
+    btn.textContent = `上傳照片中（${i + 1}/${photoCount}）…`;
   }
 
   const { data, error } = await sb.from('timeline_events')
-    .insert({ date, time: '', week_label: weekLabel, content, target, type: 'milestone', photo_path: photoPath })
+    .insert({ date, time: '', week_label: weekLabel, content, target, type: 'milestone', photo_paths: photoPaths })
     .select().single();
 
   btn.disabled = false; btn.textContent = '＋ 新增里程碑';
@@ -1012,12 +1079,7 @@ async function handleAddMilestone(e){
   await renderTimeline();
   document.getElementById('milestoneForm').reset();
   document.getElementById('msDate').value = formatDateObj(new Date());
-
-  pendingPhotoBlob = null;
-  rotateEditState.dataUrl = null;
-  rotateEditState.baseRotation = 0;
-  rotateEditState.fineRotation = 0;
-  document.getElementById('msPhotoPreviewWrap').classList.add('hidden');
+  resetPendingPhotos();
 }
 
 async function deleteTimelineItem(id){
@@ -1025,7 +1087,7 @@ async function deleteTimelineItem(id){
   const item = timeline.find(t => t.id === id);
   const { error } = await sb.from('timeline_events').delete().eq('id', id);
   if(error){ alert('刪除失敗：' + error.message); return; }
-  if(item && item.photoPath){ await sb.storage.from(PHOTO_BUCKET).remove([item.photoPath]); }
+  if(item && item.photoPaths && item.photoPaths.length){ await sb.storage.from(PHOTO_BUCKET).remove(item.photoPaths); }
   timeline = timeline.filter(t => t.id !== id);
   await renderTimeline();
 }
@@ -1056,10 +1118,13 @@ async function renderTimeline(){
       const tgt = getTargetInfo(item.target);
       const icon = item.type === 'feed' ? '🍼' : item.type === 'diaper' ? '🧷' : '⭐';
       const timeLabel = item.time ? `${item.date}　${item.time}` : item.date;
-      const photoBlock = item.photoPath ? `
-        <div class="mt-2.5">
-          <img id="photo-${item.id}" class="thumb hidden" onclick="openPhotoLightbox('${item.id}')" alt="超音波照片" />
-          <div id="photoLoad-${item.id}" class="flex items-center gap-2 text-xs" style="color:var(--ink-soft)"><span class="spinner"></span>照片載入中…</div>
+      const photoBlock = (item.photoPaths && item.photoPaths.length) ? `
+        <div class="mt-2.5 grid grid-cols-3 gap-2">
+          ${item.photoPaths.map((p, idx) => `
+            <div class="relative">
+              <img id="photo-${item.id}-${idx}" class="thumb hidden" style="height:5.5rem" onclick="openPhotoLightbox('${item.id}','${idx}')" alt="超音波照片 ${idx + 1}" />
+              <div id="photoLoad-${item.id}-${idx}" class="flex items-center justify-center gap-1 text-[10px] h-[5.5rem] rounded-lg" style="color:var(--ink-soft);background:var(--cream-deep)"><span class="spinner"></span></div>
+            </div>`).join('')}
         </div>` : '';
       return `
         <div class="relative fade-in">
@@ -1081,19 +1146,22 @@ async function renderTimeline(){
     }).join('') +
   `</div>`;
 
-  const withPhotos = sorted.filter(i => i.photoPath);
-  await Promise.all(withPhotos.map(async item => {
-    const { data, error } = await sb.storage.from(PHOTO_BUCKET).createSignedUrl(item.photoPath, 3600);
-    const imgEl = document.getElementById('photo-' + item.id);
-    const loadEl = document.getElementById('photoLoad-' + item.id);
-    if(error || !data){ if(loadEl) loadEl.textContent = '照片載入失敗'; return; }
+  const photoJobs = [];
+  sorted.forEach(item => {
+    (item.photoPaths || []).forEach((path, idx) => photoJobs.push({ itemId: item.id, idx, path }));
+  });
+  await Promise.all(photoJobs.map(async job => {
+    const { data, error } = await sb.storage.from(PHOTO_BUCKET).createSignedUrl(job.path, 3600);
+    const imgEl = document.getElementById(`photo-${job.itemId}-${job.idx}`);
+    const loadEl = document.getElementById(`photoLoad-${job.itemId}-${job.idx}`);
+    if(error || !data){ if(loadEl) loadEl.textContent = '載入失敗'; return; }
     if(imgEl){ imgEl.src = data.signedUrl; imgEl.dataset.full = data.signedUrl; imgEl.classList.remove('hidden'); }
     if(loadEl) loadEl.remove();
   }));
 }
 
-function openPhotoLightbox(id){
-  const imgEl = document.getElementById('photo-' + id);
+function openPhotoLightbox(itemId, idx){
+  const imgEl = document.getElementById(`photo-${itemId}-${idx}`);
   if(!imgEl || !imgEl.dataset.full) return;
   openModal(`
     <img src="${imgEl.dataset.full}" class="w-full rounded-xl mb-4" alt="超音波照片放大檢視" />
@@ -1102,7 +1170,7 @@ function openPhotoLightbox(id){
 }
 
 async function addTimelineEntry(partial){
-  const row = { date: partial.date, time: partial.time || '', week_label: partial.weekLabel || '', content: partial.content, target: partial.target, type: partial.type, photo_path: partial.photoPath || null };
+  const row = { date: partial.date, time: partial.time || '', week_label: partial.weekLabel || '', content: partial.content, target: partial.target, type: partial.type, photo_paths: partial.photoPaths || [] };
   const { data, error } = await sb.from('timeline_events').insert(row).select().single();
   if(error){ alert('紀錄失敗：' + error.message); return; }
   timeline.push(mapTimelineRow(data));
